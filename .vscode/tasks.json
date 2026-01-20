@@ -1,0 +1,12 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "flash",
+            "type": "process",
+            "command": "OpenOCD//flash.bat",
+            "group": "build",
+            "problemMatcher": []
+        }
+    ]
+}
