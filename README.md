@@ -19,8 +19,8 @@ root
 ├─cmake           |---
 │  └─stm32cubemx  |没病不用动
 ├─Core            |---
-│  ├─Inc          |没病不用动
-│  └─Src          |没病不用动
+│  ├─Inc          |略
+│  └─Src          |略
 ├─Drivers         |---
 ├─OpenOCD         |个人写的烧录相关 修改flash的.elf内容（openocd） 有条件可以加除了dap之外的烧录器
 └─User            |---
