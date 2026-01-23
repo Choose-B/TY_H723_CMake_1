@@ -7,7 +7,8 @@
       "request": "launch",
       "name": "cmsis-dap-debug",
       "servertype": "openocd",
-      "executable": "build/Debug/TY_H723_CMake_1.elf",
+      // 这个是根据主文件名 作为名字 ${workspaceFolderBasename}
+      "executable": "build/Debug/${workspaceFolderBasename}.elf",
       "runToEntryPoint": "main",
       "configFiles": [
         "interface/cmsis-dap.cfg",

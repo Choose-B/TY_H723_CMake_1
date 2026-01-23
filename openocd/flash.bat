@@ -1,4 +1,16 @@
 @echo off
-@REM 使用openocd中的daplink.cfg中的内容,对这个elf文件进行确认烧录结束 然后reset 再退出openocd
+REM 获取当前脚本所在目录的父目录名称（项目名称）
+for %%i in ("%~dp0\..") do set "PROJECT_NAME=%%~nxi"
 
-openocd -f openocd/daplink.cfg -c "program build/debug/TY_H723_CMake_1.elf verify reset exit"
+REM 构建 ELF 文件路径（使用正斜杠避免 OpenOCD 路径问题）
+set "ELF_FILE=build/debug/%PROJECT_NAME%.elf"
+set "ELF_FILE=%ELF_FILE:\=/%"
+
+REM 检查文件是否存在
+if not exist "%ELF_FILE%" (
+    echo Error: ELF file not found at %ELF_FILE%
+    exit /b 1
+)
+
+REM 使用标准化路径烧录
+openocd -f openocd/daplink.cfg -c "program \"%ELF_FILE%\" verify reset exit"

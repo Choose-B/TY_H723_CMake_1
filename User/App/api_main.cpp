@@ -11,6 +11,9 @@
 #include "api_main.h"
 #include "main.h"
 #include <stdio.h>
+#include "bsp_usart.hpp"
+
+circle_buffer<32768> userbuffer;
 
 /**
  * @brief 总初始化

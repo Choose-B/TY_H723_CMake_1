@@ -45,13 +45,24 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined library search paths
 )
 
-# Add sources to executable
-target_sources(${CMAKE_PROJECT_NAME} PRIVATE
-    # Add user sources here
-    User/App/api_main.cpp
-    User/Bsp/bsp_usart.cpp
-
+# 当源文件变化时强制重新生成，包含所有的.c .cpp
+file(GLOB_RECURSE USER_SOURCES 
+    RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
+    CONFIGURE_DEPENDS  # ⚠️ 关键：启用依赖检查
+    User/App/*.c
+    User/App/*.cpp
+    User/Bsp/*.c
+    User/Bsp/*.cpp
+    User/Drv/*.c
+    User/Drv/*.cpp
+    User/Mid/*.c
+    User/Mid/*.cpp
+    User/Alg/*.c
+    User/Alg/*.cpp
 )
+
+# Add sources to executable
+target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${USER_SOURCES})
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
