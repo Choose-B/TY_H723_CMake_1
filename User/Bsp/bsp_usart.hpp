@@ -142,6 +142,7 @@ public:
     memset(buffer, 0, sizeof(buffer));
     on_buffer_swap = func;
   }
+
   /**
    * @brief 写入数据到当前缓冲区
    * @param data 数据指针
@@ -181,16 +182,16 @@ class bsp_usart
 {
 private:
   size_t         rx_size;
-  USART_TypeDef *instance; ///< 串口寄存器基地址
+  UART_HandleTypeDef *instance; ///< 串口寄存器基地址
 
-  // 这四个指针指向不指向是构造函数干的事，因而不会占据空间
+  // 这六个指针指向不指向是构造函数干的事，因而不会占据空间
 
   circle_buffer<RX_SIZE> *rx_buffer_circle; ///< 接收缓冲区指针（可切换实现）
   double_buffer<RX_SIZE> *rx_buffer_double; ///< 双缓冲区实现（可选方案）
   uint8_t (*rx_buffer_array)[RX_SIZE];      ///< 不搞缓冲区实现（可选方案）
   circle_buffer<TX_SIZE> *tx_buffer_circle; ///< 接收缓冲区指针（可切换实现）
   double_buffer<TX_SIZE> *tx_buffer_double; ///< 双缓冲区实现（可选方案）
-  uint8_t(tx_buffer_array)[TX_SIZE];        ///< 不搞缓冲区实现（可选方案）
+  uint8_t (*tx_buffer_array)[TX_SIZE];        ///< 不搞缓冲区实现（可选方案）
 
 
 public:
@@ -198,7 +199,9 @@ public:
    * @brief 构造函数
    * @param usart 串口外设实例（如USART1）
    */
-  bsp_usart(USART_TypeDef *usart);
+  bsp_usart(UART_HandleTypeDef *usart):instance(usart)
+  {
+  }
 
   /**
    * @brief 初始化串口
