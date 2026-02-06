@@ -10,13 +10,18 @@
 #include "queue.h"
 #include "semphr.h"
 
+#if __cplusplus
+
 /**
  * @brief 串口驱动组件类
  *
  * 该类封装了基于STM32 HAL库、FreeRTOS和CMSIS_OS2的串口驱动功能，
  * 支持DMA传输、流缓冲区管理、互斥锁保护和错误处理等功能。
+ *
+ * @param BUFFER_SIZE 存储的缓冲区大小（单双缓冲区）
+ * @param MSG_SIZE 消息队列的大小（消息邮箱）
  */
-template <size_t BUFFER_SIZE = 256, size_t LATEST_DATA_SIZE = 64, size_t MSG_SIZE = sizeof(uint32_t)>
+template <size_t BUFFER_SIZE = 256, size_t MSG_SIZE = sizeof(uint32_t)>
 class SerialDriver
 {
 public:
@@ -26,28 +31,26 @@ public:
    */
   enum class ReceiveMode
   {
-    LATEST_ONLY,   // 仅保留最新一次接收到的数据
-    SINGLE_BUFFER, // 使用单个流缓冲区
-    DOUBLE_BUFFER  // 使用双流缓冲区机制
+    LATEST_ONLY   = 1, // 仅保留最新一次接收到的数据（使用消息邮箱）
+    SINGLE_BUFFER = 2, // 使用单个流缓冲区
+    DOUBLE_BUFFER = 3  // 使用双流缓冲区机制
   };
 
 private:
-  UART_HandleTypeDef  *_huart;                         ///< UART句柄指针，指向底层硬件接口
-  osMutexId_t          _mutex_id;                      ///< CMSIS-RTOS2互斥锁ID，用于线程安全访问
-  osMessageQueueId_t   _msg_queue_id;                  ///< CMSIS-RTOS2消息队列ID，用于传感器数据传递
-  StreamBufferHandle_t _rx_stream_buffer;              ///< FreeRTOS接收流缓冲区句柄（单缓冲模式）
-  StreamBufferHandle_t _rx_stream_buffer1;             ///< FreeRTOS接收流缓冲区句柄1（双缓冲模式）
-  StreamBufferHandle_t _rx_stream_buffer2;             ///< FreeRTOS接收流缓冲区句柄2（双缓冲模式）
-  StreamBufferHandle_t _tx_stream_buffer;              ///< FreeRTOS发送流缓冲区句柄
-  ReceiveMode          _receive_mode;                  ///< 接收模式，指定数据接收策略
-  uint8_t              _latest_data[LATEST_DATA_SIZE]; ///< 最新数据存储缓冲区
-  size_t               _latest_data_size;              ///< 最新数据缓冲区大小
-  bool                 _rx_active;                     ///< 接收状态标志，指示是否正在接收数据
-  uint8_t              _rx_dma_buffer[1];              ///< DMA接收临时缓冲区
-  bool                 _current_buffer;                ///< 当前使用的流缓冲区标识，true表示使用buffer2，false表示buffer1
-  size_t               _buffer_size;                   ///< 缓冲区大小，单位字节
-  size_t               _msg_item_size;                 ///< 消息队列中每个项目的大小
-  bool                 _transmit_enable;               ///< 是否启用发送
+  UART_HandleTypeDef  *_huart;                      ///< UART句柄指针，指向底层硬件接口
+  osMutexId_t          _mutex_id;                   ///< CMSIS-RTOS2互斥锁ID，用于线程安全访问
+  osMessageQueueId_t   _msg_queue_id;               ///< CMSIS-RTOS2消息队列ID，用于LATEST_ONLY模式
+  StreamBufferHandle_t _rx_stream_buffers[2];       ///< 接收流缓冲区数组，[0]为单缓冲或双缓冲第一个，[1]为双缓冲第二个
+  StreamBufferHandle_t _tx_stream_buffer;           ///< FreeRTOS发送流缓冲区句柄
+  ReceiveMode          _receive_mode;               ///< 接收模式，指定数据接收策略
+  bool                 _rx_active;                  ///< 接收状态标志，指示是否正在接收数据
+  uint8_t              _rx_dma_buffer[BUFFER_SIZE]; ///< DMA接收缓冲区，用于多字节接收
+  uint8_t              _tx_dma_buffer[BUFFER_SIZE]; ///< DMA发送缓冲区，用于多字节发送
+  bool                 _current_buffer;             ///< 当前使用的流缓冲区标识，true表示使用buffer2，false表示buffer1
+  size_t               _buffer_size;                ///< 缓冲区大小，单位字节
+  size_t               _msg_item_size;              ///< 消息队列中每个项目的大小
+  bool                 _transmit_enable;            ///< 是否启用发送
+  uint32_t             _last_received_length;       ///< 最后一次接收的数据长度
 
 public:
   /**
@@ -93,15 +96,6 @@ public:
   int receiveData(uint8_t *buffer, size_t size, uint32_t timeout = osWaitForever);
 
   /**
-   * @brief 从消息队列获取传感器数据
-   *
-   * @param data 存储传感器数据的指针
-   * @param timeout 超时时间（ticks）
-   * @return osStatus_t 操作结果
-   */
-  osStatus_t getSensorData(void *data, uint32_t timeout = osWaitForever);
-
-  /**
    * @brief 获取发送缓冲区剩余空间
    *
    * @return size_t 剩余空间大小
@@ -132,6 +126,24 @@ public:
    * @param huart UART句柄
    */
   void dmaErrorCallback(UART_HandleTypeDef *huart);
+
+  /**
+   * @brief IDLE中断处理函数
+   *
+   * 处理由IDLE中断检测到的数据包
+   *
+   * @param received_length 接收到的数据长度
+   */
+  void handleIdleInterrupt(uint32_t received_length);
+
+  /**
+   * @brief 内部IDLE中断处理函数
+   *
+   * 内部处理IDLE中断，自动计算接收到的数据长度
+   *
+   * @param huart UART句柄
+   */
+  void handleIdleInterruptInternal(UART_HandleTypeDef *huart);
 
 private:
   /**
@@ -184,5 +196,27 @@ private:
    */
   void handleDmaError();
 };
+
+extern SerialDriver<256, sizeof(uint32_t)> g_serial_driver_uart1;
+extern SerialDriver<256, sizeof(uint32_t)> g_serial_driver_uart6;
+
+#endif // __cplusplus
+
+
+/**
+ * @brief C风格编译这个函数
+ *
+ */
+#if __cplusplus
+extern "C"
+{
+#endif // __cplusplus
+
+  void HAL_BSP_UART_IRQHandler(UART_HandleTypeDef *huart);
+
+#if __cplusplus
+}
+#endif // __cplusplus
+
 
 #endif // UART_HPP

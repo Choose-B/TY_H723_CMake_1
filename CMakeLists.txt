@@ -48,7 +48,7 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # 当源文件变化时强制重新生成，包含所有的.c .cpp
 file(GLOB_RECURSE USER_SOURCES 
     RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
-    CONFIGURE_DEPENDS  # ⚠️ 关键：启用依赖检查
+    CONFIGURE_DEPENDS  # 关键：启用依赖检查
     User/App/*.c
     User/App/*.cpp
     User/Bsp/*.c

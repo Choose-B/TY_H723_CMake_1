@@ -21,6 +21,8 @@
 #include "task.h"
 #include "cmsis_os2.h"
 
+#include "uart.hpp"
+#include "usart.h"
 
 /**
  * @brief 总硬件初始化
@@ -28,7 +30,6 @@
  */
 void app_init()
 {
-  HAL_Delay(10);
   printf("start\n");
 }
 
@@ -58,15 +59,12 @@ extern osSemaphoreId_t sendSemHandle;
  */
 void _defaultTask(void *argument)
 {
-  int count = 0;
+  uint8_t buffer[8] = {0};
   for (;;)
   {
-    count++;
-    if (count == 100)
+    if(g_serial_driver_uart6.receiveData(buffer,8,osWaitForever) > 0)
     {
-      count = 0;
-      printf("defaultTask 1s\n");
+      HAL_UART_Transmit(&huart6,buffer,8,1000);
     }
-    osDelay(10);
   }
 }
