@@ -6,29 +6,40 @@ extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart6;
 
 
-// 模板实例化实现
-template class SerialDriver<256, sizeof(uint32_t)>;
+// 模板实例化实现 第一个数字为缓冲区大小（uint8_t） 第二个数字为消息队列的长度（uint8_t）
+template class SerialDriver<256, 8>;
 
 
-SerialDriver<256, sizeof(uint32_t)> g_serial_driver_uart1(&huart1, SerialDriver<256, sizeof(uint32_t)>::ReceiveMode::LATEST_ONLY, true);
-SerialDriver<256, sizeof(uint32_t)> g_serial_driver_uart6(&huart6, SerialDriver<256, sizeof(uint32_t)>::ReceiveMode::LATEST_ONLY, true);
+__attribute__((section(".dma_buffer"))) SerialDriver<256, 8> g_serial_driver_uart6(&huart6, SerialDriver<256, 8>::ReceiveMode::DOUBLE_BUFFER, true);
 
+// __attribute__((section(".dma_buffer"))) SerialDriver<256, 8> g_serial_driver_uart6(&huart6, SerialDriver<256, 8>::ReceiveMode::LATEST_ONLY, true);
 
-//< @todo: 发现了问题，构造函数这个东西 是在main函数之前就实现的，故而需要专门写一个init函数在main的正确位置调用
+// __attribute__((section(".dma_buffer"))) SerialDriver<256, 8> g_serial_driver_uart6(&huart6, SerialDriver<256, 8>::ReceiveMode::SINGLE_BUFFER, true);
 
 
 /**
  * @brief Construct a new SerialDriver<BUFFER_SIZE, MSG_SIZE>::SerialDriver object
- * 
- * @tparam BUFFER_SIZE 
- * @tparam MSG_SIZE 
- * @param huart 
- * @param rx_mode 
- * @param transmit_signal 
+ *
+ * @tparam BUFFER_SIZE
+ * @tparam MSG_SIZE
+ * @param huart
+ * @param rx_mode
+ * @param transmit_signal
  */
 template <size_t BUFFER_SIZE, size_t MSG_SIZE>
 SerialDriver<BUFFER_SIZE, MSG_SIZE>::SerialDriver(UART_HandleTypeDef *huart, ReceiveMode rx_mode, bool transmit_signal)
   : _huart(huart), _receive_mode(rx_mode), _rx_active(false), _current_buffer(false), _buffer_size(BUFFER_SIZE), _msg_item_size(MSG_SIZE), _transmit_enable(transmit_signal), _last_received_length(0)
+{ // 初始化成员变量但不执行资源分配
+  _mutex_id             = NULL;
+  _msg_queue_id         = NULL;
+  _rx_stream_buffers[0] = NULL;
+  _rx_stream_buffers[1] = NULL;
+  _tx_stream_buffer     = NULL;
+  // memset(_rx_dma_buffer, 0, sizeof(_rx_dma_buffer));
+}
+
+template <size_t BUFFER_SIZE, size_t MSG_SIZE>
+bool SerialDriver<BUFFER_SIZE, MSG_SIZE>::init()
 {
   // 创建互斥锁 (使用CMSIS-RTOS2 API)
   const osMutexAttr_t mutex_attr =
@@ -39,6 +50,10 @@ SerialDriver<BUFFER_SIZE, MSG_SIZE>::SerialDriver(UART_HandleTypeDef *huart, Rec
       .cb_size   = 0};
 
   _mutex_id = osMutexNew(&mutex_attr);
+  if (_mutex_id == NULL)
+  {
+    return false; // 互斥锁创建失败
+  }
 
   // 根据接收模式创建消息队列 - 只有LATEST_ONLY模式才创建
   if (_receive_mode == ReceiveMode::LATEST_ONLY)
@@ -54,6 +69,11 @@ SerialDriver<BUFFER_SIZE, MSG_SIZE>::SerialDriver(UART_HandleTypeDef *huart, Rec
 
     // 对于LATEST_ONLY模式，消息队列长度为1，只保留最新数据
     _msg_queue_id = osMessageQueueNew(1, _msg_item_size, &msgq_attr);
+    if (_msg_queue_id == NULL)
+    {
+      cleanupResources(); // 清理已创建的资源
+      return false;       // 消息队列创建失败
+    }
   }
   else
   {
@@ -71,11 +91,27 @@ SerialDriver<BUFFER_SIZE, MSG_SIZE>::SerialDriver(UART_HandleTypeDef *huart, Rec
   {
     case ReceiveMode::SINGLE_BUFFER:
       _rx_stream_buffers[0] = xStreamBufferCreate(BUFFER_SIZE, 1);
+      if (_rx_stream_buffers[0] == NULL)
+      {
+        cleanupResources(); // 清理已创建的资源
+        return false;       // 流缓冲区创建失败
+      }
       break;
     case ReceiveMode::DOUBLE_BUFFER:
       // 创建两个流缓冲区用于双缓冲机制
       _rx_stream_buffers[0] = xStreamBufferCreate(BUFFER_SIZE, 1);
+      if (_rx_stream_buffers[0] == NULL)
+      {
+        cleanupResources(); // 清理已创建的资源
+        return false;       // 流缓冲区创建失败
+      }
+
       _rx_stream_buffers[1] = xStreamBufferCreate(BUFFER_SIZE, 1);
+      if (_rx_stream_buffers[1] == NULL)
+      {
+        cleanupResources(); // 清理已创建的资源
+        return false;       // 流缓冲区创建失败
+      }
       break;
     default: // LATEST_ONLY
       // 不需要流缓冲区
@@ -86,6 +122,11 @@ SerialDriver<BUFFER_SIZE, MSG_SIZE>::SerialDriver(UART_HandleTypeDef *huart, Rec
   {
     // 创建发送流缓冲区 (使用FreeRTOS API - 流缓冲区)
     _tx_stream_buffer = xStreamBufferCreate(BUFFER_SIZE, 1);
+    if (_tx_stream_buffer == NULL)
+    {
+      cleanupResources(); // 清理已创建的资源
+      return false;       // 发送流缓冲区创建失败
+    }
   }
   else
   {
@@ -97,6 +138,8 @@ SerialDriver<BUFFER_SIZE, MSG_SIZE>::SerialDriver(UART_HandleTypeDef *huart, Rec
 
   // 启动接收
   startReception();
+
+  return true; // 初始化成功
 }
 
 // 析构函数实现
@@ -105,15 +148,23 @@ SerialDriver<BUFFER_SIZE, MSG_SIZE>::~SerialDriver()
 {
   stopReception();
 
+  cleanupResources();
+}
+
+template <size_t BUFFER_SIZE, size_t MSG_SIZE>
+void SerialDriver<BUFFER_SIZE, MSG_SIZE>::cleanupResources()
+{
   if (_mutex_id != NULL)
   {
     osMutexDelete(_mutex_id);
+    _mutex_id = NULL;
   }
 
   // 只有LATEST_ONLY模式才创建了消息队列，需要删除
   if (_msg_queue_id != NULL)
   {
     osMessageQueueDelete(_msg_queue_id);
+    _msg_queue_id = NULL;
   }
 
   // 统一释放接收流缓冲区
@@ -122,12 +173,14 @@ SerialDriver<BUFFER_SIZE, MSG_SIZE>::~SerialDriver()
     if (_rx_stream_buffers[i] != NULL)
     {
       vStreamBufferDelete(_rx_stream_buffers[i]);
+      _rx_stream_buffers[i] = NULL;
     }
   }
 
   if (_tx_stream_buffer != NULL)
   {
     vStreamBufferDelete(_tx_stream_buffer);
+    _tx_stream_buffer = NULL;
   }
 }
 
@@ -383,9 +436,22 @@ void SerialDriver<BUFFER_SIZE, MSG_SIZE>::handleIdleInterrupt(uint32_t received_
       _current_buffer = !_current_buffer; // 双缓冲切换
     }
 
+    // 1. 停止当前 DMA 传输，确保状态干净
+    HAL_UART_DMAStop(_huart);
+
+    // 2. 将数据发送到流缓冲区
     if (target_buffer != NULL)
     {
-      xStreamBufferSend(target_buffer, _rx_dma_buffer, received_length, 0);
+        xStreamBufferSendFromISR(target_buffer, _rx_dma_buffer, received_length, NULL);
+    }
+
+    // 3. 关键：在重启前，可以选择清空本地 DMA 缓冲区，防止重复读取旧数据
+    // memset(_rx_dma_buffer, 0, received_length); 
+
+    // 4. 重新启动接收
+    if (_rx_active)
+    {
+        HAL_UART_Receive_DMA(_huart, _rx_dma_buffer, BUFFER_SIZE);
     }
   }
 
@@ -412,11 +478,14 @@ void SerialDriver<BUFFER_SIZE, MSG_SIZE>::handleReceiveComplete()
 template <size_t BUFFER_SIZE, size_t MSG_SIZE>
 void SerialDriver<BUFFER_SIZE, MSG_SIZE>::handleTransmitComplete()
 {
-  // 检查是否还有更多数据需要发送
-  if (_tx_stream_buffer != NULL && xStreamBufferSpacesAvailable(_tx_stream_buffer) < BUFFER_SIZE)
+  // 检查流缓冲区是否还有剩余数据需要继续通过 DMA 发送
+  if (_tx_stream_buffer != NULL)
   {
-    // 有更多数据待发送，继续发送过程
-    startTransmission();
+    size_t available = xStreamBufferBytesAvailable(_tx_stream_buffer);
+    if (available > 0)
+    {
+       startTransmission();
+    }
   }
 }
 
@@ -461,10 +530,9 @@ void HAL_BSP_UART_IRQHandler(UART_HandleTypeDef *huart)
     // 清除IDLE中断标志
     __HAL_UART_CLEAR_FLAG(huart, UART_FLAG_IDLE);
 
-    // 使用if-else结构处理不同UART的IDLE中断
     if (huart == &huart1)
     {
-      g_serial_driver_uart1.handleIdleInterruptInternal(huart); // 让类内部处理DMA计数器和BUFFER_SIZE
+      // g_serial_driver_uart1.handleIdleInterruptInternal(huart); // 让类内部处理DMA计数器和BUFFER_SIZE
     }
     else if (huart == &huart6)
     {
@@ -476,41 +544,43 @@ void HAL_BSP_UART_IRQHandler(UART_HandleTypeDef *huart)
   }
 }
 
+/**
+ * @brief 以下回调函数 因为串口统一使用IDLE中断之后，用不到，所以注释在这里
+ */
 
-// C语言回调函数实现
-extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
-{
-  if (huart == &huart1)
-  {
-    g_serial_driver_uart1.dmaTransferCompleteCallback(huart);
-  }
-  else if (huart == &huart6)
-  {
-    g_serial_driver_uart6.dmaTransferCompleteCallback(huart);
-  }
-}
+// extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+// {
+//   if (huart == &huart1)
+//   {
+//     // g_serial_driver_uart1.dmaTransferCompleteCallback(huart);
+//   }
+//   else if (huart == &huart6)
+//   {
+//     g_serial_driver_uart6.dmaTransferCompleteCallback(huart);
+//   }
+// }
 
-extern "C" void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-  // 这个回调主要用于错误恢复，实际数据处理在IDLE中断中
-  if (huart == &huart1)
-  {
-    g_serial_driver_uart1.dmaTransferCompleteCallback(huart);
-  }
-  else if (huart == &huart6)
-  {
-    g_serial_driver_uart6.dmaTransferCompleteCallback(huart);
-  }
-}
+// extern "C" void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+// {
+//   // 这个回调主要用于错误恢复，实际数据处理在IDLE中断中
+//   if (huart == &huart1)
+//   {
+//     // g_serial_driver_uart1.dmaTransferCompleteCallback(huart);
+//   }
+//   else if (huart == &huart6)
+//   {
+//     g_serial_driver_uart6.dmaTransferCompleteCallback(huart);
+//   }
+// }
 
-extern "C" void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
-{
-  if (huart == &huart1)
-  {
-    g_serial_driver_uart1.dmaErrorCallback(huart);
-  }
-  else if (huart == &huart6)
-  {
-    g_serial_driver_uart6.dmaErrorCallback(huart);
-  }
-}
+// extern "C" void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+// {
+//   if (huart == &huart1)
+//   {
+//     // g_serial_driver_uart1.dmaErrorCallback(huart);
+//   }
+//   else if (huart == &huart6)
+//   {
+//     g_serial_driver_uart6.dmaErrorCallback(huart);
+//   }
+// }

@@ -7,6 +7,7 @@ extern "C"
 #endif
 
   void app_init(void);
+  void freertos_init(void);
 
   void _defaultTask(void *argument);
 

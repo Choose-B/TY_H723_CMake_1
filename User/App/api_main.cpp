@@ -25,12 +25,24 @@
 #include "usart.h"
 
 /**
- * @brief 总硬件初始化
- * 
+ * @brief main中初始化（无freertos）
+ * @note  也就是在main.c中写了一个函数调用，这样转嫁就可以使用cpp了 
+ *
  */
 void app_init()
 {
-  printf("start\n");
+  printf("app_init\n");
+}
+
+/**
+ * @brief 和freertos有关的初始化
+ * @note  也就是在main.c中的MX_FREERTOS_INIT里，写了一个函数调用，这样转嫁就可以使用cpp了 
+ * 
+ */
+void freertos_init()
+{
+  g_serial_driver_uart6.init();
+  printf("freertos_init\n");
 }
 
 
@@ -38,7 +50,7 @@ void app_init()
  * 因为CMSIS_OS2这个封装，导致很多东西和原生的FreeRTOS不一样，所以写法也会有的不一样
  * CMSIS_OS2很多句柄不对外声明，如果想用只能extern出来用
  * 虽然说CMSIS_OS2做了层封装，方便使用。但是原生的FreeRTOS在以后要用的时候，还是要花时间适应
- * 默认任务不能extern出来，但是可以改ioc文件里面的部分，让他可以外部定义这个任务
+ * 默认任务只能weak声明，其他的可以使用外部声明
  * CubeMX提供了FreeRTOS配置的部分，故而使用Cubemx配置了，只有一些内容，必须使用cpp来写
  * 以下均为FreeRTOS的内容定义，因为使用c调用cpp，所以只能在这边定义，然后外部声明让官方接口调用
  * printf要加\n
@@ -46,8 +58,6 @@ void app_init()
 
 
 /* 声明需要使用的句柄 */
-
-extern osSemaphoreId_t sendSemHandle;
 
 /* CMSIS_OS2中使用的是声明，我只需要外部定义同名的函数，然后exteren "C"即可 */
 
@@ -59,12 +69,13 @@ extern osSemaphoreId_t sendSemHandle;
  */
 void _defaultTask(void *argument)
 {
-  uint8_t buffer[8] = {0};
+  uint8_t buffer[256] = {0};
   for (;;)
   {
-    if(g_serial_driver_uart6.receiveData(buffer,8,osWaitForever) > 0)
+    int count = g_serial_driver_uart6.receiveData(buffer,256,osWaitForever);
+    if(count > 0)
     {
-      HAL_UART_Transmit(&huart6,buffer,8,1000);
+      g_serial_driver_uart6.sendData(buffer,256);
     }
   }
 }

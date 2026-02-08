@@ -17,6 +17,8 @@
  *
  * 该类封装了基于STM32 HAL库、FreeRTOS和CMSIS_OS2的串口驱动功能，
  * 支持DMA传输、流缓冲区管理、互斥锁保护和错误处理等功能。
+ * @note 经过测试，只读最新无任何测试问题。
+ * @note 单缓冲区在自己串口发送的时候串口助手显示有问题，但是逻辑是对的。内容可以正常的存入缓冲区然后等待一个一个的读取。
  *
  * @param BUFFER_SIZE 存储的缓冲区大小（单双缓冲区）
  * @param MSG_SIZE 消息队列的大小（消息邮箱）
@@ -63,6 +65,16 @@ public:
    * @param transmit_signal 是否启用发送功能
    */
   SerialDriver(UART_HandleTypeDef *huart, ReceiveMode rx_mode, bool transmit_signal);
+
+  /**
+   * @brief 初始化函数
+   *
+   * 初始化串口驱动对象，配置必要的FreeRTOS对象
+   *
+   * @return true 初始化成功
+   * @return false 初始化失败
+   */
+  bool init();
 
   /**
    * @brief 析构函数
@@ -154,6 +166,13 @@ private:
   void startReception();
 
   /**
+   * @brief 清理资源
+   *
+   * 清理所有分配的资源
+   */
+  void cleanupResources();
+
+  /**
    * @brief 停止接收数据
    *
    * 停止DMA接收
@@ -197,8 +216,8 @@ private:
   void handleDmaError();
 };
 
-extern SerialDriver<256, sizeof(uint32_t)> g_serial_driver_uart1;
-extern SerialDriver<256, sizeof(uint32_t)> g_serial_driver_uart6;
+// extern SerialDriver<256, 8> g_serial_driver_uart1;
+extern SerialDriver<256, 8> g_serial_driver_uart6;
 
 #endif // __cplusplus
 
