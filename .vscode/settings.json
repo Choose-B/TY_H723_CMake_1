@@ -10,7 +10,9 @@
         "-j=20",                                        
         "--pch-storage=memory",                         
         "--limit-results=500",                          
-        "--log=info"                                    
+        "--log=info"
+                                            
     ],
-    "clangd.checkUpdates": true
+    "clangd.checkUpdates": true,
+    
 }

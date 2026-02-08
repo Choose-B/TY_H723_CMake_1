@@ -1,8 +1,8 @@
 #ifndef __BSP_USART_HPP__
 #define __BSP_USART_HPP__
 
-#include "FreeRTOS.h"
-#include "usart.h"
+#include "FreeRTOS.h" // IWYU pragma: keep
+#include "usart.h"    // IWYU pragma: keep
 #include "cmsis_os2.h"
 #include "stream_buffer.h"
 
@@ -20,7 +20,7 @@ extern "C"
 #endif // __cplusplus
 
 
-// CPP才可编译此部分 
+// CPP才可编译此部分
 // 最下面有类实现的对象的extern位置，当然extern可以在别的地方写。定义在.cpp中
 #if __cplusplus
 /**

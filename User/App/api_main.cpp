@@ -4,20 +4,20 @@
  * @brief 应用层与stm32的接口，放着最直接运行的函数
  * @version 0.1
  * @date 2026-01-20
- * 
+ *
  * @note 在C++中使用FreeRTOS的Task函数时
  *       需要将任务函数声明为extern "C"格式
  *       同时函数参数必须是void *pvParameters。
  *       所以，我直接把任务放到一个转接文件，然后extern
  *
  * @copyright Copyright (c) 2026
- * 
+ *
  */
 #include "api_main.h"
 #include "stdio.h"
-#include "stm32h7xx_hal.h"
+#include "stm32h7xx_hal.h" // IWYU pragma: keep
 
-#include "FreeRTOS.h"
+#include "FreeRTOS.h" // IWYU pragma: keep
 #include "task.h"
 #include "cmsis_os2.h"
 
@@ -25,7 +25,7 @@
 
 /**
  * @brief main中初始化（无freertos）
- * @note  也就是在main.c中写了一个函数调用，这样转嫁就可以使用cpp了 
+ * @note  也就是在main.c中写了一个函数调用，这样转嫁就可以使用cpp了
  *
  */
 void app_init()
@@ -35,8 +35,8 @@ void app_init()
 
 /**
  * @brief 和freertos有关的初始化
- * @note  也就是在main.c中的MX_FREERTOS_INIT里，写了一个函数调用，这样转嫁就可以使用cpp了 
- * 
+ * @note  也就是在main.c中的MX_FREERTOS_INIT里，写了一个函数调用，这样转嫁就可以使用cpp了
+ *
  */
 void freertos_init()
 {
@@ -63,7 +63,7 @@ void freertos_init()
 
 /**
  * @brief 默认任务
- * 
+ *
  * @param argument 默认参数
  */
 void _defaultTask(void *argument)
@@ -71,10 +71,10 @@ void _defaultTask(void *argument)
   uint8_t buffer[256] = {0};
   for (;;)
   {
-    int count = bsp_usart6.receiveData(buffer,8,osWaitForever);
-    if(count > 0)
+    int count = bsp_usart6.receiveData(buffer, 8, osWaitForever);
+    if (count > 0)
     {
-      bsp_usart6.sendData(buffer,8);
+      bsp_usart6.sendData(buffer, 8);
     }
   }
 }
