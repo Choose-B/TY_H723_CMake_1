@@ -9,6 +9,7 @@
  * 
  */
 
+
 /**
  * @brief 使用示例：（必须要在freertos的任务中运行收发 中断中不要进行此操作 中断不能阻塞）（使用的IDLE中断进行接收 发送也是同理）
  *
@@ -25,6 +26,7 @@
  *    bsp_usart6.sendData(buffer,8);// 就把buffer中的数据发送出去了
  * 
  */
+
 
 #include "bsp_usart.hpp"
 #include <stdio.h>
@@ -88,6 +90,8 @@ void HAL_BSP_UART_IRQHandler(UART_HandleTypeDef *huart)
 /* 模板实例化实现 以及类的实例化 第一个数字为缓冲区大小（uint8_t） 第二个数字为消息队列的长度（uint8_t） 参数第一个串口句柄 第二个是模式 第三个是是否启用发送逻辑 */
 template class bsp_usart<256, 8>;
 
+// 这个 __attribute__((section(".dma_buffer"))) 是把他放到dtcm区域外，在.ld格式文件下实现的
+
 // __attribute__((section(".dma_buffer"))) bsp_usart<256, 8> bsp_usart6(&huart6, bsp_usart<256, 8>::ReceiveMode::LATEST_ONLY, true);
 __attribute__((section(".dma_buffer"))) bsp_usart<256, 8> bsp_usart6(&huart6, bsp_usart<256, 8>::ReceiveMode::SINGLE_BUFFER, true);
 // __attribute__((section(".dma_buffer"))) bsp_usart<256, 8> bsp_usart6(&huart6, bsp_usart<256, 8>::ReceiveMode::DOUBLE_BUFFER, true);
@@ -102,9 +106,15 @@ __attribute__((section(".dma_buffer"))) bsp_usart<256, 8> bsp_usart6(&huart6, bs
  * 线程安全：在多任务环境下的互斥访问控制，防止多个任务同时操作串口导致的问题
  * 错误处理：如何处理DMA传输错误、缓冲区溢出、硬件故障等情况
  * 接口设计：对外接口的易用性和一致性
+ * 该类封装了基于STM32 HAL库、FreeRTOS和CMSIS_OS2的串口驱动功能，
+ * 支持DMA传输、流缓冲区管理、互斥锁保护和错误处理等功能（错误处理那些回调有写，但是没放到回调函数中）
  *
- * @tparam BUFFER_SIZE
- * @tparam MSG_SIZE
+ * @note 经过测试，只读最新无任何测试问题。
+ * @note 单缓冲区在自己串口发送的时候串口助手显示有问题，但是逻辑是对的。内容可以正常的存入缓冲区然后等待一个一个的读取。
+ *
+ * @param BUFFER_SIZE 存储的缓冲区大小（单双缓冲区）
+ * @param MSG_SIZE 消息队列的大小（消息邮箱）
+ *
  * @param huart
  * @param rx_mode
  * @param transmit_signal

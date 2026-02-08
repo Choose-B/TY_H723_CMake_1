@@ -23,17 +23,6 @@ extern "C"
 // CPP才可编译此部分
 // 最下面有类实现的对象的extern位置，当然extern可以在别的地方写。定义在.cpp中
 #if __cplusplus
-/**
- * @brief 板载支持包串口类
- *
- * 该类封装了基于STM32 HAL库、FreeRTOS和CMSIS_OS2的串口驱动功能，
- * 支持DMA传输、流缓冲区管理、互斥锁保护和错误处理等功能（错误处理那些回调有写，但是没放到回调函数中）
- * @note 经过测试，只读最新无任何测试问题。
- * @note 单缓冲区在自己串口发送的时候串口助手显示有问题，但是逻辑是对的。内容可以正常的存入缓冲区然后等待一个一个的读取。
- *
- * @param BUFFER_SIZE 存储的缓冲区大小（单双缓冲区）
- * @param MSG_SIZE 消息队列的大小（消息邮箱）
- */
 template <size_t BUFFER_SIZE = 256, size_t MSG_SIZE = sizeof(uint32_t)>
 class bsp_usart
 {
