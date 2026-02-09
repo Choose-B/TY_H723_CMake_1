@@ -6,30 +6,32 @@
 
 ```txt
 root              
-│                 │.clang-format 代码格式化设置 可以按照自己风格改
-│                 │keilkill.bat  删除中间文件
-│                 │README.md     本文件
-│                 │其余为生成的文件
-│                 |---
-├─.vscode         |里面`launch`要修改`.elf`（调试）
-│                 |`settings`根据自己电脑修改工具链位置（clangd）
-│                 |`tasks`是终端执行的任务 看自己改不改了
-├─build           |---
-│  └─Debug        |这里面有一个`compile_commands.json`（clangd）
-├─cmake           |---
-│  └─stm32cubemx  |没病不用动
-├─Core            |---
-│  ├─Inc          |略
-│  └─Src          |略
-├─Drivers         |---
-├─Flash           |个人写的烧录相关 修改flash的.elf内容（openocd） 有条件可以加除了dap之外的烧录器
-├─Middlewares     |官方生成库，DSP 和 FreeRTOS
-└─User            |---
-    ├─Alg         |算法
-    ├─Bsp         |板载支持包
-    ├─Drv         |驱动层 /设备层
-    ├─Mid         |中间层
-    └─App         |应用层 / 混编接口层
+│                   │.clang-format 代码格式化设置 可以按照自己风格改
+│                   │keilkill.bat  删除中间文件
+│                   │README.md     本文件
+│                   │其余为生成的文件
+│                   |---
+├─.vscode           |里面`launch`要修改`.elf`（调试）
+│                   |`settings`根据自己电脑修改工具链位置（clangd）
+│                   |`tasks`是终端执行的任务 看自己改不改了
+├─build             |---
+│  └─Debug          |这里面有一个`compile_commands.json`（clangd）
+├─cmake             |---
+│  └─stm32cubemx    |没病不用动
+├─Core              |---
+│  ├─Inc            |略
+│  └─Src            |略
+├─Drivers           |---
+├─Flash             |个人写的烧录相关 修改flash的.elf内容（openocd） 有条件可以加除了dap之外的烧录器
+├─Middlewares       |官方生成库，DSP 和 FreeRTOS
+└─User              |---
+    ├─Bsp           |板载支持驱动
+    ├─Device        |驱动层 / 设备层
+    ├─Module        |模块层（ 多个设备组合 ）
+    ├─Middleware    |中间层
+    │  ├─Algorithm  |  算法层
+    │  └─Service    |  服务层 
+    └─App           |应用层 / c cpp混编接口层
 
 ```
 > 对这几个层的理解是 板载支持包完全是按照芯片引脚等等信息来写一层封装，在BSP的基础上，一点点的封装出对应的驱动/设备Drv，然后多个驱动/设备Drv连接起来，这就是中间层Mid。应用层就是把Mid和Drv的东西都拎出来，变成具体的任务。算法Alg就是穿插在这里面的。

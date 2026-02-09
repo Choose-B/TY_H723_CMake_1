@@ -49,16 +49,24 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 file(GLOB_RECURSE USER_SOURCES 
     RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     CONFIGURE_DEPENDS  # 关键：启用依赖检查
-    User/App/*.c
-    User/App/*.cpp
+
     User/Bsp/*.c
     User/Bsp/*.cpp
-    User/Drv/*.c
-    User/Drv/*.cpp
-    User/Mid/*.c
-    User/Mid/*.cpp
-    User/Alg/*.c
-    User/Alg/*.cpp
+
+    User/Device/*.c
+    User/Device/*.cpp
+
+    User/Module/*.c
+    User/Module/*.cpp
+
+    User/Middleware/Algorithm/*.c
+    User/Middleware/Algorithm/*.cpp
+    
+    User/Middleware/Service/*.c
+    User/Middleware/Service/*.cpp
+
+    User/App/*.c
+    User/App/*.cpp
 )
 
 # Add sources to executable
@@ -70,11 +78,12 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
-    ./User/App
     ./User/Bsp
-    ./User/Drv
-    ./User/Mid
-    ./User/Alg
+    ./User/Device
+    ./User/Module
+    ./User/Middleware/Algorithm
+    ./User/Middleware/Service
+    ./User/App
     ./Middlewares/ARM/DSP/Include
 )
 

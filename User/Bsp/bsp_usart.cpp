@@ -4,9 +4,9 @@
  * @brief 实现了一个简易的串口驱动（FreeRTOS）（只接收最新数据不能用FIFO）
  * @version 0.1
  * @date 2026-02-08
- * 
+ *
  * @copyright Copyright (c) 2026
- * 
+ *
  */
 
 
@@ -20,11 +20,11 @@
  *
  * extern好之后，在任务中使用
  *
- *    bsp_usart6.init(); // 需要freertos内核初始化成功之后使用
- *    bsp_usart6.receiveData(buffer,8,osWaitForever);// 这样就存到buffer中了 时间是一直等
- *    
- *    bsp_usart6.sendData(buffer,8);// 就把buffer中的数据发送出去了
- * 
+ *    bsp_usart6.init();                              // 需要freertos内核初始化成功之后使用
+ *    bsp_usart6.receiveData(buffer,8,osWaitForever); // 这样就存到buffer中了 时间是一直等
+ *
+ *    bsp_usart6.sendData(buffer,8);                  // 就把buffer中的数据发送出去了
+ *
  */
 
 
@@ -62,9 +62,9 @@ extern "C"
 
 
 /**
- * @brief 此函数为IDLE中断触发函数，需要添加到it.c中，从而实现IDLE中断回调
- * 
- * @param huart 
+ * @brief 此函数为IDLE中断触发函数，需要添加到it.c中，从而实现IDLE中断回调。在.h中extern "C"
+ *
+ * @param huart
  */
 void HAL_BSP_UART_IRQHandler(UART_HandleTypeDef *huart)
 {
@@ -99,7 +99,7 @@ __attribute__((section(".dma_buffer"))) bsp_usart<256, 8> bsp_usart6(&huart6, bs
 
 /**
  * @brief 以下是 bsp_usart<BUFFER_SIZE, MSG_SIZE>::bsp_usart 这个类的函数定义
- * 
+ *
  * 串口驱动组件实现：（只使用了IDLE中断，其他未使用）
  * 设计要点：使用FreeRTOS的流缓冲区，实现单缓冲区和多缓冲区的处理
  * 不用阻塞：DMA收发，规范中断回调函数（DMA都开普通模式 FIFO在只取最新模式会有问题）
@@ -109,15 +109,16 @@ __attribute__((section(".dma_buffer"))) bsp_usart<256, 8> bsp_usart6(&huart6, bs
  * 该类封装了基于STM32 HAL库、FreeRTOS和CMSIS_OS2的串口驱动功能，
  * 支持DMA传输、流缓冲区管理、互斥锁保护和错误处理等功能（错误处理那些回调有写，但是没放到回调函数中）
  *
- * @note 经过测试，只读最新无任何测试问题。
+ * @note 经过测试，无任何测试问题。
  * @note 单缓冲区在自己串口发送的时候串口助手显示有问题，但是逻辑是对的。内容可以正常的存入缓冲区然后等待一个一个的读取。
+ * @note 双缓冲区逻辑无误，但是应用场景需要经过自己测试，理清他的逻辑，有点反直觉
  *
  * @param BUFFER_SIZE 存储的缓冲区大小（单双缓冲区）
  * @param MSG_SIZE 消息队列的大小（消息邮箱）
  *
- * @param huart
- * @param rx_mode
- * @param transmit_signal
+ * @param huart 串口句柄
+ * @param rx_mode 接收模式
+ * @param transmit_signal 是否启用发送
  */
 template <size_t BUFFER_SIZE, size_t MSG_SIZE>
 bsp_usart<BUFFER_SIZE, MSG_SIZE>::bsp_usart(UART_HandleTypeDef *huart, ReceiveMode rx_mode, bool transmit_signal)
