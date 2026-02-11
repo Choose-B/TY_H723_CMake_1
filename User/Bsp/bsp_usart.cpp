@@ -5,28 +5,33 @@
  * @version 0.1
  * @date 2026-02-08
  *
+ * @todo 回调函数中只写了UART6，具体的处理需要自己添加进来
+ *
  * @copyright Copyright (c) 2026
  *
  */
 
-
 /**
- * @brief 使用示例：（必须要在freertos的任务中运行收发 中断中不要进行此操作 中断不能阻塞）（使用的IDLE中断进行接收 发送也是同理）
+ * @brief 使用示例：（必须要在freertos的任务中运行收发 中断中不行 中断不能阻塞）
+         （使用的IDLE中断进行接收 发送也是同理）
  *
- * 模板实例化实现 以及类的实例化 第一个数字为缓冲区大小（uint8_t） 第二个数字为消息队列的长度（uint8_t）
+ * @note 模板实例化实现 以及类的实例化 第一个数字为缓冲区大小（uint8_t） 第二个数字为消息队列的长度（uint8_t）
  *
+ *   // 全局实例化模板
  *   template class bsp_usart<256, 8>;
- *   __attribute__((section(".dma_buffer"))) bsp_usart<256, 8> bsp_usart6(&huart6, bsp_usart<256, 8>::ReceiveMode::LATEST_ONLY, true);
  *
- * extern好之后，在任务中使用
+ *   // 全局实例化类
+ *   __attribute__((section(".dma_buffer"))) 
+ *   bsp_usart<256, 8> bsp_usart6(&huart6, bsp_usart<256, 8>::ReceiveMode::LATEST_ONLY, true);
  *
  *    bsp_usart6.init();                              // 需要freertos内核初始化成功之后使用
- *    bsp_usart6.receiveData(buffer,8,osWaitForever); // 这样就存到buffer中了 时间是一直等
  *
+ * @note extern好之后，在任务中使用
+ *
+ *    bsp_usart6.receiveData(buffer,8,osWaitForever); // 这样就存到buffer中了 时间是一直等
  *    bsp_usart6.sendData(buffer,8);                  // 就把buffer中的数据发送出去了
  *
  */
-
 
 #include "bsp_usart.hpp"
 #include <stdio.h>

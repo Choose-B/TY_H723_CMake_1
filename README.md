@@ -7,9 +7,8 @@
 ```txt
 root              
 │                   │.clang-format 代码格式化设置 可以按照自己风格改
-│                   │keilkill.bat  删除中间文件
 │                   │README.md     本文件
-│                   │其余为生成的文件
+│                   │其余为生成的文件，包括锁等等官方生成的文件
 │                   |---
 ├─.vscode           |里面`launch`要修改`.elf`（调试）
 │                   |`settings`根据自己电脑修改工具链位置（clangd）
@@ -79,7 +78,7 @@ HAL库也早就写好了cpp调用c的`extern "C"`内容
 
 **最终迭代成使用CMAKE，工程使用C++书写，开盒即用**
 
-# NOTE
+# 此处记载为了实现某些功能，修改了ST生成的文件 & NOTE
 
 USART1 为经过了CH340的type-c接口 可以直连上位机
 
@@ -93,3 +92,120 @@ USART5 为接收机 只有RX端
 
 有SPI Flash
 
+## CMakeList
+
+为了更方便的添加.c .cpp文件 在CMakeList中写了：
+
+```bash
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS ON)
+
+
+# 当源文件变化时强制重新生成，包含所有的.c .cpp
+file(GLOB_RECURSE USER_SOURCES 
+    RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
+    CONFIGURE_DEPENDS  # 关键：启用依赖检查
+    User/App/*.c
+    User/App/*.cpp
+    User/Bsp/*.c
+    User/Bsp/*.cpp
+    User/Drv/*.c
+    User/Drv/*.cpp
+    User/Mid/*.c
+    User/Mid/*.cpp
+    User/Alg/*.c
+    User/Alg/*.cpp
+)
+
+# Add sources to executable
+target_sources(${CMAKE_PROJECT_NAME} PRIVATE 
+    # Add user source
+    ${USER_SOURCES}
+)
+
+
+# Add include paths
+target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
+    # Add user defined include paths
+    ./User/App
+    ./User/Bsp
+    ./User/Drv
+    ./User/Mid
+    ./User/Alg
+    ./Middlewares/ARM/DSP/Include
+)
+```
+
+## .ld文件
+
+为了DMA传输，把需要用到DMA的东西的存储，换到了DTCM之外
+
+```c
+__attribute__((section(".dma_buffer"))) 使用这一个缀修饰
+```
+
+修改ld文件的内容如下，中文注释之间为添加内容，下方的.data是原来带的，用于确定方位
+
+```c
+
+ /* 用户为dma传输配置的内存地址 */
+  .dma_buffer (NOLOAD) :
+  {
+    . = ALIGN(32);
+    _sdma_buffer = .;
+    *(.dma_buffer)
+    *(.dma_buffer*)
+    . = ALIGN(32);
+    _edma_buffer = .;
+  } >RAM_D1
+
+  /* 用户dma相关配置结束 */
+
+  /* used by the startup to initialize data */
+  _sidata = LOADADDR(.data);
+
+  /* Initialized data sections goes into RAM, load LMA copy after code */
+  .data :
+  {
+    . = ALIGN(4);
+    _sdata = .;        /* create a global symbol at data start */
+    *(.data)           /* .data sections */
+    *(.data*)          /* .data* sections */
+    *(.RamFunc)        /* .RamFunc sections */
+    *(.RamFunc*)       /* .RamFunc* sections */
+
+    . = ALIGN(4);
+  } >DTCMRAM AT> FLASH
+
+```
+
+## stm32h7xx_it.c
+
+实现idle处理
+
+```c
+/**
+  * @brief This function handles USART6 global interrupt.
+  */
+void USART6_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART6_IRQn 0 */
+
+  /* USER CODE END USART6_IRQn 0 */
+  HAL_UART_IRQHandler(&huart6);
+  /* USER CODE BEGIN USART6_IRQn 1 */
+  HAL_BSP_UART_IRQHandler(&huart6); // 添加了这一行，从而实现处理
+
+  /* USER CODE END USART6_IRQn 1 */
+}
+
+```
+
+## 让clangd 不报头文件未使用的错误（间接使用 clangd识别不出来）
+
+使用： 在include头文件后面添加
+
+`// IWYU pragma: keep`
+
+可以规避 `Included header FreeRTOS.h is not used directly (fixes available)` 这个错误

@@ -7,7 +7,7 @@
 #include "stream_buffer.h"
 
 
-// C风格编译此部分
+// C风格编译此部分（因为需要在stm32h7_it.c中调用）
 #if __cplusplus
 extern "C"
 {
@@ -20,10 +20,12 @@ extern "C"
 #endif // __cplusplus
 
 
-// CPP才可编译此部分
+// CPP才可编译此部分（因为需要在stm32h7_it.c中调用）
 // 最下面有类实现的对象的extern位置，当然extern可以在别的地方写。定义在.cpp中
 #if __cplusplus
-template <size_t BUFFER_SIZE = 256, size_t MSG_SIZE = sizeof(uint32_t)>
+
+// 模板的第一个数字为缓冲区大小（单位uint8_t） 第二个数字为消息队列的长度（uint8_t）
+template <size_t BUFFER_SIZE = 256, size_t MSG_SIZE = 8>
 class bsp_usart
 {
 
@@ -68,26 +70,18 @@ public:
   bsp_usart(UART_HandleTypeDef *huart, ReceiveMode rx_mode, bool transmit_signal);
 
   /**
-   * @brief 初始化函数
-   *
-   * 初始化串口驱动对象，配置必要的FreeRTOS对象
+   * @brief 初始化函数 初始化串口驱动对象，配置必要的FreeRTOS对象
    *
    * @return true 初始化成功
    * @return false 初始化失败
    */
   bool init();
 
-  /**
-   * @brief 析构函数
-   *
-   * 释放所有分配的资源
-   */
+  // 析构函数 释放所有分配的资源
   ~bsp_usart();
 
   /**
-   * @brief 发送数据
-   *
-   * 将数据放入发送缓冲区，并启动DMA传输
+   * @brief 发送数据 将数据放入发送缓冲区，并启动DMA传输
    *
    * @param data 要发送的数据指针
    * @param size 数据大小
@@ -97,9 +91,7 @@ public:
   int sendData(const uint8_t *data, size_t size, uint32_t timeout = osWaitForever);
 
   /**
-   * @brief 接收数据
-   *
-   * 根据接收模式从相应的缓冲区读取数据
+   * @brief 接收数据 根据接收模式从相应的缓冲区读取数据
    *
    * @param buffer 接收数据的缓冲区
    * @param size 请求读取的数据大小
@@ -123,68 +115,44 @@ public:
   size_t getRxAvailableData();
 
   /**
-   * @brief DMA传输完成回调函数
-   *
-   * 由HAL库调用，处理DMA传输完成事件
+   * @brief DMA传输完成回调函数 由HAL库调用，处理DMA传输完成事件
    *
    * @param huart UART句柄
    */
   void dmaTransferCompleteCallback(UART_HandleTypeDef *huart);
 
   /**
-   * @brief DMA错误回调函数
-   *
-   * 由HAL库调用，处理DMA错误事件
+   * @brief DMA错误回调函数 由HAL库调用，处理DMA错误事件
    *
    * @param huart UART句柄
    */
   void dmaErrorCallback(UART_HandleTypeDef *huart);
 
   /**
-   * @brief IDLE中断处理函数
-   *
-   * 处理由IDLE中断检测到的数据包
+   * @brief IDLE中断处理函数 处理由IDLE中断检测到的数据包
    *
    * @param received_length 接收到的数据长度
    */
   void handleIdleInterrupt(uint32_t received_length);
 
   /**
-   * @brief 内部IDLE中断处理函数
-   *
-   * 内部处理IDLE中断，自动计算接收到的数据长度
+   * @brief 内部IDLE中断处理函数 内部处理IDLE中断，自动计算接收到的数据长度
    *
    * @param huart UART句柄
    */
   void handleIdleInterruptInternal(UART_HandleTypeDef *huart);
 
 private:
-  /**
-   * @brief 开始接收数据
-   *
-   * 启动DMA接收
-   */
+  // 开始接收数据 启动DMA接收
   void startReception();
 
-  /**
-   * @brief 清理资源
-   *
-   * 清理所有分配的资源
-   */
+  // 清理资源 清理所有分配的资源
   void cleanupResources();
 
-  /**
-   * @brief 停止接收数据
-   *
-   * 停止DMA接收
-   */
+  // 停止接收数据 停止DMA接收
   void stopReception();
 
-  /**
-   * @brief 开始传输数据
-   *
-   * 启动DMA发送
-   */
+  // 开始传输数据 启动DMA发送
   void startTransmission();
 
   /**
@@ -195,25 +163,13 @@ private:
    */
   bool isTransmitting();
 
-  /**
-   * @brief 处理接收完成事件
-   *
-   * 根据接收模式处理接收到的数据
-   */
+  // 处理接收完成事件 根据接收模式处理接收到的数据
   void handleReceiveComplete();
 
-  /**
-   * @brief 处理发送完成事件
-   *
-   * 继续发送剩余数据或结束发送过程
-   */
+  // 处理发送完成事件 继续发送剩余数据或结束发送过程
   void handleTransmitComplete();
 
-  /**
-   * @brief 处理DMA错误
-   *
-   * 记录错误并尝试重新初始化
-   */
+  // 处理DMA错误 记录错误并尝试重新初始化
   void handleDmaError();
 };
 

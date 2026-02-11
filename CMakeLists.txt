@@ -45,34 +45,20 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined library search paths
 )
 
-# 当源文件变化时强制重新生成，包含所有的.c .cpp
+# 包含所有的用户.c .cpp
 file(GLOB_RECURSE USER_SOURCES 
     RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     CONFIGURE_DEPENDS  # 关键：启用依赖检查
 
-    User/Bsp/*.c
-    User/Bsp/*.cpp
-
-    User/Device/*.c
-    User/Device/*.cpp
-
-    User/Module/*.c
-    User/Module/*.cpp
-
-    User/Middleware/Algorithm/*.c
-    User/Middleware/Algorithm/*.cpp
-    
-    User/Middleware/Service/*.c
-    User/Middleware/Service/*.cpp
-
-    User/App/*.c
-    User/App/*.cpp
+    User/*.c
+    User/*.cpp
 )
 
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE 
     # Add user source
     ${USER_SOURCES}
+
 )
 
 # Add include paths
@@ -84,7 +70,6 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ./User/Middleware/Algorithm
     ./User/Middleware/Service
     ./User/App
-    ./Middlewares/ARM/DSP/Include
 )
 
 # Add project symbols (macros)
