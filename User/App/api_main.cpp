@@ -9,6 +9,7 @@
  *
  */
 
+
 #include "api_main.h"
 #include "main.h" // IWYU pragma: keep
 
@@ -20,6 +21,7 @@
 #include "bsp_usart.hpp"
 #include "JC2804.hpp"
 
+
 /**
  * @brief main中初始化（无freertos）
  * @note  也就是在main.c中写了一个函数调用，这样转嫁就可以使用cpp了
@@ -27,8 +29,13 @@
  */
 void app_init()
 {
-  printf("\napp_init\n");
+  printf("\napp_init_ok\n");
 }
+
+
+/* 创建对应句柄 handle */
+osThreadId_t can_rx_handler_task_handle;
+
 
 /**
  * @brief 和freertos有关的初始化
@@ -37,11 +44,28 @@ void app_init()
  */
 void freertos_init()
 {
+  // 初始化bsp设备
   bsp_usart6.init();
   bsp_can1.init();
 
-  printf("freertos_init\n");
+
+  // 初始化云台双电机
+  motor_yaw.init();
+  motor_pitch.init();
+
+
+  // 创建 CAN 接收后处理任务
+  const osThreadAttr_t can_rx_handler_task_attributes = {
+    .name       = "can_rx_handler_task",
+    .stack_size = 128 * 4,
+    .priority   = (osPriority_t)osPriorityNormal,
+  };
+  can_rx_handler_task_handle = osThreadNew(_can_rx_handler_task, nullptr, &can_rx_handler_task_attributes);
+
+
+  printf("freertos_init_ok\n");
 }
+
 
 /**
  * 因为CMSIS_OS2这个封装，导致很多东西和原生的FreeRTOS不一样，所以写法也会有的不一样
@@ -62,12 +86,13 @@ void freertos_init()
 
 /* CMSIS_OS2中使用的是声明，我只需要外部定义同名的函数，然后exteren "C"即可 */
 
+
 /**
  * @brief 默认任务
  *
  * @param argument 默认参数
  */
-void _defaultTask(void *argument)
+extern "C" void _defaultTask(void *argument)
 {
   motor_yaw.enter_closed_loop();
   osDelay(10);
@@ -79,6 +104,45 @@ void _defaultTask(void *argument)
     osDelay(1000);
     motor_yaw.set_speed(-60);
     osDelay(1000);
+  }
+}
 
+
+/**
+ * @brief 用于处理CAN接收后的数据处理
+ *
+ */
+// api_main.cpp
+extern "C" void _can_rx_handler_task(void *argument)
+{
+  can_rx_msg_t rx_msg;
+
+  for (;;)
+  {
+    osStatus_t status = bsp_can1.receive(&rx_msg, osWaitForever);
+
+    if (status == osOK)
+    {
+      // 根据 ID 判断是哪个设备
+      uint32_t device_id = rx_msg.header.Identifier & 0x0F; // 0x600+ID -> ID 是低4位
+
+      // 查找对应的 JC2804 实例
+      if (device_id == motor_yaw._device_id)
+      {
+        motor_yaw.on_can_message(&rx_msg);
+      }
+      else if (device_id == motor_pitch._device_id)
+      {
+        motor_pitch.on_can_message(&rx_msg);
+      }
+
+      // 打印调试信息
+      printf("CAN RX: ID=0x%03X, Data=", rx_msg.header.Identifier);
+      for (int i = 0; i < 8; ++i)
+      {
+        printf("%02X ", rx_msg.data[i]);
+      }
+      printf("\n");
+    }
   }
 }

@@ -11,6 +11,9 @@ extern "C"
 
   void _defaultTask(void *argument);
 
+  void _can_rx_handler_task(void *argument);
+
+
 #ifdef __cplusplus
 }
 #endif
