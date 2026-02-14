@@ -1,9 +1,12 @@
 /**
  * @file api_main.cpp
  * @author Rh
- * @brief 应用层与stm32的接口，放着最直接运行的函数
+ * @brief 应用层与stm32的接口，放着最直接运行的任务
  * @version 0.1
  * @date 2026-01-20
+ *
+ * @note 各个外设的中断回调函数，放到了各个的BSP中实现，方便查找
+ *       对于中断得到的数据，在这里创建任务等待消息队列 + 处理就可以
  *
  * @copyright Copyright (c) 2026
  *
@@ -14,8 +17,6 @@
 #include "main.h" // IWYU pragma: keep
 
 #include "stdio.h"
-#include "FreeRTOS.h" // IWYU pragma: keep
-#include "task.h"
 #include "cmsis_os2.h"
 
 #include "bsp_usart.hpp"
@@ -71,7 +72,7 @@ void freertos_init()
  * 以下均为FreeRTOS的内容定义，使用c调用cpp，需要extern "C"定义，让RTOS接管
  * CubeMX提供了FreeRTOS配置，故而使用它的CMSIS_OS2
  * CMSIS_OS2封装了一层，导致很多东西和原生的FreeRTOS不一样，所以写法也会有的不一样
- * CMSIS_OS2的初始句柄不对外声明，如果想用只能extern出来用
+ * CMSIS_OS2的初始句柄不对外声明，如果想用只能单独extern出来用
  * CMSIS_OS2做了层封装，方便使用。但是原生的FreeRTOS在以后要用的时候，还是要花时间适应
  * CMSIS_OS2的默认任务只能weak声明，其他的可以使用外部声明
  * printf要加\n
@@ -81,10 +82,6 @@ void freertos_init()
  *       同时函数参数必须是void *pvParameters。
  *       所以，我直接把任务放到一个转接文件，然后extern
  */
-
-/* 声明需要使用的句柄 */
-
-/* CMSIS_OS2中使用的是声明，我只需要外部定义同名的函数，然后exteren "C"即可 */
 
 
 /**
@@ -96,7 +93,7 @@ extern "C" void _defaultTask(void *argument)
 {
   motor_yaw.enter_closed_loop();
   osDelay(100);
-  motor_yaw.set_control_mode(1);
+  motor_yaw.set_control_mode(1); // 速度模式
   osDelay(100);
   // motor_yaw.set_speed(0);
   // osDelay(100);
@@ -112,10 +109,9 @@ extern "C" void _defaultTask(void *argument)
 
 
 /**
- * @brief 用于处理CAN接收后的数据处理
+ * @brief 用于处理CAN接收后的数据处理任务
  *
  */
-// api_main.cpp
 extern "C" void _can_rx_handler_task(void *argument)
 {
   can_rx_msg_t rx_msg;

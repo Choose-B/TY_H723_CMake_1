@@ -33,7 +33,7 @@
 
 /* 全局实例化类对象 */
 
-bsp_can bsp_can1(&hfdcan1, 1); 
+bsp_can bsp_can1(&hfdcan1, 1);
 
 
 /* 中断回调函数 */

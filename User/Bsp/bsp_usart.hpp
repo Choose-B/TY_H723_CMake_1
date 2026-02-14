@@ -13,7 +13,7 @@ extern "C"
 {
 #endif // __cplusplus
 
-  void HAL_BSP_UART_IRQHandler(UART_HandleTypeDef *huart);
+  void idle_iqr_handler(UART_HandleTypeDef *huart);
 
 #if __cplusplus
 }

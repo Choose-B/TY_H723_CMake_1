@@ -5,7 +5,7 @@
  * @version 0.1
  * @date 2026-02-08
  *
- * @todo 回调函数中只写了UART6，具体的处理需要自己添加进来
+ * @todo 回调函数中只写了UART6，具体的其他函数处理需要自己添加进来，或者使用更先进的方式
  *
  * @copyright Copyright (c) 2026
  *
@@ -18,7 +18,7 @@
  * @note 模板实例化实现 以及类的实例化 第一个数字为缓冲区大小（uint8_t） 第二个数字为消息队列的长度（uint8_t）
  *
  *   // 全局实例化模板
- *   template class bsp_usart<256, 8>;  
+ *   template class bsp_usart<256, 8>;
  *
  *   // 全局实例化类
  *   __attribute__((section(".dma_buffer")))
@@ -71,7 +71,7 @@ extern "C"
  *
  * @param huart
  */
-void HAL_BSP_UART_IRQHandler(UART_HandleTypeDef *huart)
+void idle_iqr_handler(UART_HandleTypeDef *huart)
 {
   // 检查是否是IDLE中断
   if ((__HAL_UART_GET_FLAG(huart, UART_FLAG_IDLE) != RESET) && (__HAL_UART_GET_IT_SOURCE(huart, UART_IT_IDLE) != RESET))
