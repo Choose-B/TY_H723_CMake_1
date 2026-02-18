@@ -35,7 +35,7 @@ AlignConsecutiveDeclarations: true
 AlignOperands:   true
 
 # # 是否对齐行尾注释
-# AlignTrailingComments: true
+AlignTrailingComments: true
 
 # # 函数声明的所有参数在放在下一行
 # AllowAllParametersOfDeclarationOnNextLine: false
@@ -73,12 +73,12 @@ AlwaysBreakTemplateDeclarations: true
 # # 函数调用时，参数的放置规则
 # -- false - 参数要么放在同一行，要么每个参数占用一行
 # -- true - 不做强制要求
-BinPackArguments: true
+BinPackArguments: false
 
 # 函数声明、定义时，参数的放置规则
 # -- false - 参数要么放在同一行，要么每个参数占用一行
 # -- true - 不做强制要求
-BinPackParameters: true
+BinPackParameters: false
 
 # 大括号放置风格
 # -- Attach - 大括号紧随前方内容，放在同一行
@@ -146,7 +146,7 @@ BreakBeforeTernaryOperators: true
 # -- BeforeColon - 在冒号 ':' 前方分割，冒号位于行首，逗号','位于行尾
 # -- BeforeComma - 在冒号和逗号前方分割，冒号和逗号都位于行首，并且对齐 
 # -- AfterColon - 在冒号和逗号后方分割，冒号和逗号位于行尾
-BreakConstructorInitializers: BeforeColon
+BreakConstructorInitializers: AfterColon
 
 # # 是否在每个java注解后方换行
 # BreakAfterJavaFieldAnnotations: false
@@ -290,7 +290,7 @@ ReflowComments:  true
 # -- Never - 不进行排序
 # -- CaseSensitive - 排序时大小写敏感
 # -- CaseInsensitive - 排序时大小写不敏感
-SortIncludes:    false
+SortIncludes:    CaseInsensitive
 
 # java 中静态 import 的排序规则
 # -- Before - 静态放在非静态前方

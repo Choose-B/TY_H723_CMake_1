@@ -1,5 +1,5 @@
 /**
- * @file protocol_uart.cpp
+ * @file protocol_usart.cpp
  * @author Rh
  * @attention 与其他模块通讯约定实现
  * @brief 串口协议解析实现，基于bsp_usart。可以实现创建多个串口协议
@@ -18,7 +18,7 @@
  *    // 先实例化bsp_usart（在bsp文件中）
  *
  *    // 全局类对象实例化（此文件中）
- *    UartProtocolHandler protocal_uart_6(&bsp_usart6, 6); // 此处可以添加帧头帧尾的信息
+ *    protocol_usart protocal_uart_6(&bsp_usart6, 6); // 此处可以添加帧头帧尾的信息
  *
  *    // 初始化协议（app_main的freertos_init中）
  *    // 协议中的_uart_protocol_task6在下面note中有写
@@ -42,15 +42,15 @@
  *
  */
 
-#include "protocol_uart.hpp"
 #include "bsp_usart.hpp"
+#include "protocol_usart.hpp"
 #include "string.h"
 #include <stdio.h>
 
 
 /* 全局类对象实例化 */
 
-UartProtocolHandler protocal_uart_6(&bsp_usart6, 6);
+protocol_usart protocal_uart_6(&bsp_usart6, 6);
 
 
 /* C接口函数实现(FreeRTOS)，因为每一个协议的处理方式都不一样，因此得extern好几个 */
@@ -89,7 +89,7 @@ static void uart_protocol_process_callback(bsp_usart<256, 8> *cur_uart, protocol
 
 
 /**
- * @brief 以下函数均为类的实现，此为构造函数，可以不需要管实现部分
+ * @brief 以下函数均为类的实现，可以不需要管实现部分，此为构造函数，
  * @attention 校验和:(header1+header2+CMD+LEN+DATA) & 0xFF
  *
  * @param uart_ptr bsp层串口实例
@@ -98,7 +98,12 @@ static void uart_protocol_process_callback(bsp_usart<256, 8> *cur_uart, protocol
  * @param t  帧尾
  * @param name FreeRTOS任务的编号
  */
-UartProtocolHandler::UartProtocolHandler(bsp_usart<256, 8> *uart_ptr, uint8_t name, uint8_t h1, uint8_t h2, uint8_t t) : uart_instance(uart_ptr), header1(h1), header2(h2), tail(t)
+protocol_usart::protocol_usart(bsp_usart<256, 8> *uart_ptr, uint8_t name, uint8_t h1, uint8_t h2, uint8_t t)
+
+  : uart_instance(uart_ptr),
+    header1(h1),
+    header2(h2),
+    tail(t)
 {
   // 初始化任务属性成员变量，使用实例特定的名称
   snprintf(taskName, sizeof(taskName), "uart_protocol_%d", name);
@@ -110,7 +115,7 @@ UartProtocolHandler::UartProtocolHandler(bsp_usart<256, 8> *uart_ptr, uint8_t na
 /**
  * @brief 协议层初始化，包含串口任务
  */
-void UartProtocolHandler::init(osThreadFunc_t _uart_protocol_task)
+void protocol_usart::init(osThreadFunc_t _uart_protocol_task)
 {
   memset(&rx_frame, 0, sizeof(rx_frame));
 
@@ -124,7 +129,7 @@ void UartProtocolHandler::init(osThreadFunc_t _uart_protocol_task)
  * @param len 长度
  * @return uint8_t 校验结果
  */
-uint8_t UartProtocolHandler::calculate_checksum(uint8_t *data, uint8_t len)
+uint8_t protocol_usart::calculate_checksum(uint8_t *data, uint8_t len)
 {
   uint8_t sum = 0;
   for (uint8_t i = 0; i < len; i++)
@@ -137,7 +142,7 @@ uint8_t UartProtocolHandler::calculate_checksum(uint8_t *data, uint8_t len)
 /**
  * @brief 发送协议帧到上位机
  */
-void UartProtocolHandler::send(uint8_t cmd, uint8_t *data, uint8_t len)
+void protocol_usart::send(uint8_t cmd, uint8_t *data, uint8_t len)
 {
   if (uart_instance == nullptr)
     return;
@@ -160,7 +165,7 @@ void UartProtocolHandler::send(uint8_t cmd, uint8_t *data, uint8_t len)
  * @brief 逻辑分发：根据指令执行具体动作
  * @param frame 完整的协议包
  */
-void UartProtocolHandler::protocol_handle_cmd()
+void protocol_usart::protocol_handle_cmd()
 {
   if (uart_instance == nullptr)
     return;
@@ -172,7 +177,7 @@ void UartProtocolHandler::protocol_handle_cmd()
 /**
  * @brief 串口协议处理任务
  */
-void UartProtocolHandler::task(void *argument)
+void protocol_usart::task(void *argument)
 {
   if (uart_instance == nullptr)
     return;

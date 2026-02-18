@@ -34,8 +34,8 @@
  */
 
 #include "bsp_usart.hpp"
-#include <stdio.h>
 #include "string.h"
+#include <stdio.h>
 
 
 /* 声明串口句柄 */
@@ -128,7 +128,16 @@ __attribute__((section(".dma_buffer"))) bsp_usart<256, 8> bsp_usart6(&huart6, Re
  */
 template <size_t BUFFER_SIZE, size_t MSG_SIZE>
 bsp_usart<BUFFER_SIZE, MSG_SIZE>::bsp_usart(UART_HandleTypeDef *huart, ReceiveMode rx_mode, bool transmit_signal, int instance_id)
-  : _huart(huart), _receive_mode(rx_mode), _rx_active(false), _current_buffer(false), _buffer_size(BUFFER_SIZE), _msg_item_size(MSG_SIZE), _transmit_enable(transmit_signal), _last_received_length(0), _instance_id(instance_id)
+
+  : _huart(huart),
+    _receive_mode(rx_mode),
+    _rx_active(false),
+    _current_buffer(false),
+    _buffer_size(BUFFER_SIZE),
+    _msg_item_size(MSG_SIZE),
+    _transmit_enable(transmit_signal),
+    _last_received_length(0),
+    _instance_id(instance_id)
 {
   // 初始化成员变量但不执行资源分配
   _mutex_id             = nullptr;

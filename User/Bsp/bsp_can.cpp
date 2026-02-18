@@ -78,7 +78,10 @@ extern "C" void HAL_FDCAN_TxBufferCompleteCallback(FDCAN_HandleTypeDef* hfdcan, 
  *
  * @param hfdcan 传入到构造函数的句柄
  */
-bsp_can::bsp_can(FDCAN_HandleTypeDef* hfdcan, int instanceId) : _hfdcan(hfdcan), _instanceId(instanceId)
+bsp_can::bsp_can(FDCAN_HandleTypeDef* hfdcan, int instanceId)
+
+  : _hfdcan(hfdcan),
+    _instanceId(instanceId)
 {
   rxQueueHandle = NULL;
   txMutexHandle = NULL;

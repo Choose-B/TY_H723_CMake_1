@@ -72,9 +72,9 @@ root
 
 调试使用vscode的运行与调试栏
 
-CORTEX-DEBUG可以看rtos的简单运行情况，内存使用情况，查看变量等等
+Cortex-Debug可以看rtos的简单运行情况，内存使用情况，查看变量等等
 
-但是后来我们应该可以换到linux下，虽然这些win也可以用：Ozone（调试 JLink DAP适配没JLink好）+ LinkScope + Systemviewer/FreeMaster（RTOS相关）
+但是后来我们应该可以换到linux下，虽然这些win也可以用：Cortex-Debug + Ozone（调试 JLink DAP适配没JLink好）+ LinkScope + Systemviewer/FreeMaster（RTOS相关）
 
 ## 如何开发
 
@@ -96,7 +96,7 @@ HAL库也早就写好了cpp调用c的`extern "C"`内容
 
 正常cpp文件为：`xxx_yyyy.cpp` 和 `xxx_yyyy.hpp` 作为区分 用**`hpp`**
 
-`xxx为 app bsp dvc mod alg svc`
+`xxx为 app bsp alg`
 
 **最终迭代成使用CMAKE，工程使用C++书写，开盒即用**
 

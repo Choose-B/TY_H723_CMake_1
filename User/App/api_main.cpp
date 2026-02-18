@@ -22,7 +22,7 @@
 
 #include "JC2804.hpp"
 
-#include "protocol_uart.hpp"
+#include "protocol_usart.hpp"
 
 /**
  * @brief main中初始化（无freertos）
@@ -60,7 +60,7 @@ void freertos_init()
   // 初始化云台双电机
   motor_yaw.init();
   motor_pitch.init();
-  
+
   // 创建 CAN 接收后处理任务
   can_rx_task_handle = osThreadNew(_can_rx_handler_task, nullptr, &can_rx_handler_task_attributes);
 

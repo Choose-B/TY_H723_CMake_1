@@ -13,31 +13,32 @@
  *
  */
 
- /**
-  * @brief 使用示例：
-  *
-  * @note 初始化
-  *
-  *   JC2804 motor_yaw(&bsp_can1, 2);    // 创建类对象（提前创建好bsp）
-  *   motor_yaw.init();                  // 初始化电机 在内核初始化之后使用
-  *   motor_yaw.on_can_message(&rx_msg); // 在canrx回调处理任务中调用
-  * 
-  * @note 任务调用，大概时间间隔要自己测，2ms一次发送数据是极限
-  *
-  *   motor_yaw.enter_closed_loop(); // 进入闭环模式
-  *   osDelay(100);
-  *   motor_yaw.set_control_mode(1); // 进入速度模式
-  *   osDelay(100);
-  *   motor_yaw.set_speed(0);        // 设置速度0 防止疯
-  *   osDelay(100);
-  *
-  *   motor_yaw.set_speed(100);      // 设置速度100 正常操控 其他模式同理
-  *
-  */
+/**
+ * @brief 使用示例：
+ *
+ * @note 初始化
+ *
+ *   JC2804 motor_yaw(&bsp_can1, 2);    // 创建类对象（提前创建好bsp）
+ *   motor_yaw.init();                  // 初始化电机 在内核初始化之后使用
+ *   motor_yaw.on_can_message(&rx_msg); // 在canrx回调处理任务中调用
+ *
+ * @note 任务调用，大概时间间隔要自己测，2ms一次发送数据是极限
+ *
+ *   motor_yaw.enter_closed_loop(); // 进入闭环模式
+ *   osDelay(100);
+ *   motor_yaw.set_control_mode(1); // 进入速度模式
+ *   osDelay(100);
+ *   motor_yaw.set_speed(0);        // 设置速度0 防止疯
+ *   osDelay(100);
+ *
+ *   motor_yaw.set_speed(100);      // 设置速度100 正常操控 其他模式同理
+ *
+ */
 
 #include "JC2804.hpp"
-#include "string.h"
 #include "stdio.h"
+#include "string.h"
+
 
 
 /* 类静态成员赋值 */
@@ -59,7 +60,11 @@ JC2804 motor_pitch(&bsp_can1, 1);
  * @param device_id 偏移id
  */
 JC2804::JC2804(bsp_can* can_interface, uint8_t device_id)
-  : _device_id(device_id),_last_request_type(NONE_REQUEST), _can(can_interface),  _mutex_id(NULL)
+
+  : _device_id(device_id),
+    _last_request_type(NONE_REQUEST),
+    _can(can_interface),
+    _mutex_id(NULL)
 {
 }
 
@@ -138,7 +143,8 @@ void JC2804::set_torque(float torque)
     0x00, // Reserved
     static_cast<uint8_t>(current_raw >> 8),
     static_cast<uint8_t>(current_raw & 0xFF),
-    0x00, 0x00 // Padding
+    0x00,
+    0x00 // Padding
   };
   send_async_command(0x2B, data, 8);
 }
@@ -166,9 +172,10 @@ void JC2804::set_absolute_position(float position)
   // 文档 5.10: 0x23 + reg 0x23, 4字节有符号位置（度 × 100）
   int32_t pos_raw = static_cast<int32_t>(position / POSITION_SCALE);
   uint8_t data[8] = {
-    0x23,       // Command: Write Register
-    0x00, 0x23, // Register Address: 0x0023 (Absolute Position)
-    0x00,       // Reserved
+    0x23, // Command: Write Register
+    0x00,
+    0x23, // Register Address: 0x0023 (Absolute Position)
+    0x00, // Reserved
     static_cast<uint8_t>(pos_raw >> 24),
     static_cast<uint8_t>(pos_raw >> 16),
     static_cast<uint8_t>(pos_raw >> 8),
@@ -205,7 +212,8 @@ void JC2804::set_low_speed(float speed)
     0x00, // Reserved
     static_cast<uint8_t>(spd_raw >> 8),
     static_cast<uint8_t>(spd_raw & 0xFF),
-    0x00, 0x00 // Padding
+    0x00,
+    0x00 // Padding
   };
   send_async_command(0x2B, data, 8);
 }
@@ -255,12 +263,12 @@ void JC2804::pvt_command(int32_t position, float speed, float torque_percent)
  * @brief 设置控制模式
  *
  * @param mode 模式值
- * 0 力矩      
- * 1 速度      
- * 2 位置梯形      
- * 3 位置滤波      
- * 4 位置直通      
- * 5 低速     
+ * 0 力矩
+ * 1 速度
+ * 2 位置梯形
+ * 3 位置滤波
+ * 4 位置直通
+ * 5 低速
  *
  */
 void JC2804::set_control_mode(uint8_t mode)
