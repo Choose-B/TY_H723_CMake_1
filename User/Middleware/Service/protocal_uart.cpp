@@ -49,15 +49,19 @@
 
 
 /* 全局类对象实例化 */
+
 UartProtocolHandler protocal_uart_6(&bsp_usart6, 6);
 
 
 /* C接口函数实现(FreeRTOS)，因为每一个协议的处理方式都不一样，因此得extern好几个 */
+
 extern "C" void _uart_protocol_task6(void *argument)
 {
   protocal_uart_6.task(argument);
 }
 
+
+/* 个人定义的处理时的回调函数 */
 
 /**
  * @brief 串口协议处理回调函数
