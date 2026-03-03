@@ -17,6 +17,7 @@ set(OLD_GLOB
   "User/Bsp/bsp_can.cpp"
   "User/Bsp/bsp_usart.cpp"
   "User/Device/JC2804.cpp"
+  "User/Device/dm_imu.cpp"
   "User/Middleware/Service/protocal_usart.cpp"
   )
 if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")

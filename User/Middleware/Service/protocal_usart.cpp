@@ -182,7 +182,7 @@ void protocol_usart::task(void *argument)
   if (uart_instance == nullptr)
     return;
 
-  printf("UART Protocol Task (Batch Mode) Started\n");
+  printf("UART Protocol Task Started\n");
 
   // 临时缓冲区，用于存放帧头 (Header1, Header2, CMD, LEN)
   uint8_t header_buf[4];

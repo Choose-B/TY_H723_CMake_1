@@ -153,6 +153,12 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
 )
 ```
 
+以及在最后一行，添加此内容，增加了对浮点数打印的支持
+
+```bash
+target_link_options(${CMAKE_PROJECT_NAME} PRIVATE -u _printf_float)
+```
+
 ## .ld文件
 
 为了DMA传输，把需要用到DMA的东西的存储，换到了DTCM之外

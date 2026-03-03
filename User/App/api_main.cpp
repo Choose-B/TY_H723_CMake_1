@@ -13,15 +13,20 @@
  */
 
 #include "api_main.h"
-#include "main.h" // IWYU pragma: keep
-
-#include "stdio.h"
 #include "cmsis_os2.h"
+#include "main.h" // IWYU pragma: keep
+#include "stdio.h"
 
+
+/* BSP */
 #include "bsp_usart.hpp"
 
+/* DVC */
+#include "dm_imu.hpp"
 #include "JC2804.hpp"
 
+
+/* SVC */
 #include "protocol_usart.hpp"
 
 /**
@@ -56,10 +61,7 @@ void freertos_init()
 
   // 初始化协议
   protocal_uart_6.init(_uart_protocol_task6);
-
-  // 初始化云台双电机
-  motor_yaw.init();
-  motor_pitch.init();
+  imu_bmi088.init();
 
   // 创建 CAN 接收后处理任务
   can_rx_task_handle = osThreadNew(_can_rx_handler_task, nullptr, &can_rx_handler_task_attributes);
@@ -91,12 +93,13 @@ void freertos_init()
  */
 extern "C" void _defaultTask(void *argument)
 {
-  uint8_t data[4] = {0x01, 0x02, 0x04, 0x08};
+  osDelay(1000);
   printf("Default Task Started\n");
+
   for (;;)
   {
-    protocal_uart_6.send(0x01, data, 4);
-    osDelay(1000);
+
+    osDelay(10);
   }
 }
 
@@ -127,6 +130,11 @@ extern "C" void _can_rx_handler_task(void *argument)
       else if (device_id == motor_pitch._device_id)
       {
         motor_pitch.on_can_message(&rx_msg);
+      }
+      // 查找对应的dm_imu 示例
+      else if (device_id == (imu_bmi088._master_id & 0x0F))
+      {
+        imu_bmi088.on_can_message(&rx_msg);
       }
     }
   }

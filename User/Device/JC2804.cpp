@@ -36,9 +36,6 @@
  */
 
 #include "JC2804.hpp"
-#include "stdio.h"
-#include "string.h"
-
 
 
 /* 类静态成员赋值 */
@@ -63,38 +60,14 @@ JC2804::JC2804(bsp_can* can_interface, uint8_t device_id)
 
   : _device_id(device_id),
     _last_request_type(NONE_REQUEST),
-    _can(can_interface),
-    _mutex_id(NULL)
+    _can(can_interface)
 {
 }
 
 // 析构函数
 JC2804::~JC2804()
 {
-  if (_mutex_id != NULL)
-  {
-    osMutexDelete(_mutex_id);
-    _mutex_id = NULL;
-  }
 }
-
-// 初始化 在FreeRTOS内核初始化之后
-void JC2804::init()
-{
-  // 创建互斥锁属性
-  osMutexAttr_t attr;
-
-  snprintf(mutex_name, sizeof(mutex_name), "JC2804_%d_Mutex", _device_id);
-
-  attr.name      = mutex_name;
-  attr.attr_bits = 0U;
-  attr.cb_mem    = NULL;
-  attr.cb_size   = 0U;
-
-  // 创建互斥锁
-  _mutex_id = osMutexNew(&attr);
-}
-
 
 /* 底层发送与请求跟踪 */
 
@@ -104,10 +77,8 @@ void JC2804::send_async_command(uint8_t cmd, const uint8_t* data, uint8_t len)
   if (!_can || len > 8)
     return;
 
-  lock();                              // 加锁
   uint32_t tx_id = 0x600 | _device_id; // 标准帧ID格式：0x600 + DeviceID
   _can->send(tx_id, const_cast<uint8_t*>(data), len);
-  unlock(); // 解锁
 }
 
 // 用于发送请求+记录请求类型，以便后续解析响应
@@ -119,12 +90,10 @@ void JC2804::send_read_request(uint8_t cmd, uint16_t reg_addr, RequestType req_t
   data[2]         = reg_addr & 0xFF;        // 寄存器地址低字节
   // 其余字节保持为0
 
-  lock(); // 加锁
   // 记录本次请求类型，以便响应时能正确解析
   _last_request_type = req_type;
 
   send_async_command(cmd, data, 8);
-  unlock(); // 解锁
 }
 
 
@@ -392,7 +361,6 @@ void JC2804::store_received_data(uint8_t* data)
 {
   // 根据 _last_request_type 解析数据
   // 假设收到的响应数据格式符合文档描述
-  lock(); // 加锁
   switch (_last_request_type)
   {
     case VOLTAGE_REQUEST:
@@ -457,7 +425,6 @@ void JC2804::store_received_data(uint8_t* data)
       _last_request_type = NONE_REQUEST;
       break;
   }
-  unlock(); // 解锁
 }
 
 
@@ -508,8 +475,6 @@ void JC2804::on_can_message(can_rx_msg_t* rx_msg)
 // 只有这个可以从类中获取数据 发起请求后才可以读取到数据 异步
 MotorData JC2804::get_latest_data_struct()
 {
-  lock(); // 加锁
   MotorData data_copy = latest_data;
-  unlock(); // 解锁
   return data_copy;
 }

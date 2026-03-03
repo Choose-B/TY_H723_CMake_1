@@ -3,7 +3,6 @@
 
 
 #include "bsp_can.hpp"
-#include "cmsis_os2.h"
 
 
 /* 电机数据结构体 */
@@ -30,9 +29,6 @@ public:
 
   // 析构函数
   ~JC2804();
-
-  // 初始化，在FreeRTOS内核初始化之后
-  void init();
 
   /* 公有成员变量（外部要使用 懒得封装） */
 
@@ -170,9 +166,7 @@ private:
 
   RequestType _last_request_type;
   bsp_can*    _can;
-  char        mutex_name[32]; // 实例互斥锁的名字，用于调试时看到名字
   MotorData   latest_data;    // 最新数据存储（使用结构体）
-  osMutexId_t _mutex_id;      // 互斥锁id
 
 
   /* 私有辅助函数 */
@@ -199,22 +193,6 @@ private:
   // 解析数据
   void store_received_data(uint8_t* data);
 
-
-  /* 互斥锁操作辅助函数 */
-
-  // 加锁
-  inline void lock()
-  {
-    if (_mutex_id)
-      osMutexAcquire(_mutex_id, osWaitForever);
-  }
-
-  // 解锁
-  inline void unlock()
-  {
-    if (_mutex_id)
-      osMutexRelease(_mutex_id);
-  }
 };
 
 
