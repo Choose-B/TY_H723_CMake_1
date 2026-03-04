@@ -24,7 +24,7 @@
  *   __attribute__((section(".dma_buffer")))
  *   bsp_usart<256, 8> bsp_usart6(&huart6, ReceiveMode::LATEST_ONLY, true);
  *
- *    bsp_usart6.init();                              // 需要freertos内核初始化成功之后使用
+ *   bsp_usart6.init();                              // 需要freertos内核初始化成功之后使用
  *
  * @note extern好之后，在任务中使用
  *

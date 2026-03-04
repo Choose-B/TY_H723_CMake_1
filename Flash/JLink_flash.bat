@@ -33,7 +33,7 @@ echo ELF File: !ELF_FILE!
 REM 创建临时 J-Link 脚本
 set "TEMP_SCRIPT=temp_jlink_script.jlink"
 (
-echo device STM32H723
+echo device STM32H723VG
 echo if SWD
 echo speed 4000
 echo r

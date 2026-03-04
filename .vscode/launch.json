@@ -31,7 +31,7 @@
       // 这个是根据主文件名 作为名字 ${workspaceFolderBasename}
       "executable": "build/Debug/${workspaceFolderBasename}.elf",
       "runToEntryPoint": "main",
-      "device": "STM32H723",
+      "device": "STM32H723VG",
       "svdFile": "Flash/STM32H723.svd",
       "liveWatch": {
           "enabled": true,

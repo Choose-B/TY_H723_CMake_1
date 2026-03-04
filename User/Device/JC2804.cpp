@@ -38,17 +38,20 @@
 #include "JC2804.hpp"
 
 
+/* 全局类成员实例化 实例化需要传入can对象和偏移id */
+
+JC2804 motor_yaw(&bsp_can1, 2);
+JC2804 motor_pitch(&bsp_can1, 1);
+
+
 /* 类静态成员赋值 */
+
 const float JC2804::VOLTAGE_SCALE     = 0.1f;
 const float JC2804::CURRENT_SCALE     = 0.01f;
 const float JC2804::SPEED_SCALE       = 0.01f;
 const float JC2804::POSITION_SCALE    = 0.01f;
 const float JC2804::TEMPERATURE_SCALE = 0.1f;
 
-
-/* 全局类成员实例化 实例化需要传入can对象和偏移id */
-JC2804 motor_yaw(&bsp_can1, 2);
-JC2804 motor_pitch(&bsp_can1, 1);
 
 /**
  * @brief 类成员函数定义

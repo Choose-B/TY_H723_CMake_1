@@ -12,11 +12,11 @@
  *
  */
 
+
 #include "api_main.h"
 #include "cmsis_os2.h"
 #include "main.h" // IWYU pragma: keep
 #include "stdio.h"
-
 
 /* BSP */
 #include "bsp_usart.hpp"
@@ -25,9 +25,9 @@
 #include "dm_imu.hpp"
 #include "JC2804.hpp"
 
-
 /* SVC */
 #include "protocol_usart.hpp"
+
 
 /**
  * @brief main中初始化（无freertos）
@@ -41,12 +41,14 @@ void app_init()
 
 
 /* 创建对应句柄 handle */
+
 osThreadId_t         can_rx_task_handle; // CAN 接收后处理任务
 const osThreadAttr_t can_rx_handler_task_attributes = {
   .name       = "can_rx_task",
   .stack_size = 128 * 4,
   .priority   = (osPriority_t)osPriorityNormal,
 };
+
 
 /**
  * @brief 和freertos有关的初始化
