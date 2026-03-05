@@ -23,7 +23,7 @@
 
 /* DVC */
 #include "dm_imu.hpp"
-#include "JC2804.hpp"
+#include "jc2804.hpp"
 
 /* SVC */
 #include "protocol_usart.hpp"
@@ -124,7 +124,7 @@ extern "C" void _can_rx_handler_task(void *argument)
       // 根据 ID 判断是哪个设备
       uint32_t device_id = rx_msg.header.Identifier & 0x0F; // 0x600+ID -> ID 是低4位
 
-      // 查找对应的 JC2804 实例
+      // 查找对应的 jc2804 实例
       if (device_id == motor_yaw._device_id)
       {
         motor_yaw.on_can_message(&rx_msg);

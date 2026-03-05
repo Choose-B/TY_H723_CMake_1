@@ -1,7 +1,7 @@
 /**
- * @file JC2804.cpp
+ * @file jc2804.cpp
  * @author Rh
- * @brief 这是一个俱瓷科技的JC2804的电机驱动
+ * @brief 这是一个俱瓷科技的jc2804的电机驱动
  *        使用的是原本封装好的bsp_can和FreeRTOS
  *        多数功能已经测试，功能90%完善
  *        适用于电赛云台，价格100左右
@@ -18,7 +18,7 @@
  *
  * @note 初始化
  *
- *   JC2804 motor_yaw(&bsp_can1, 2);    // 创建类对象（提前创建好bsp）
+ *   jc2804 motor_yaw(&bsp_can1, 2);    // 创建类对象（提前创建好bsp）
  *   motor_yaw.init();                  // 初始化电机 在内核初始化之后使用
  *   motor_yaw.on_can_message(&rx_msg); // 在canrx回调处理任务中调用
  *
@@ -35,22 +35,22 @@
  *
  */
 
-#include "JC2804.hpp"
+#include "jc2804.hpp"
 
 
 /* 全局类成员实例化 实例化需要传入can对象和偏移id */
 
-JC2804 motor_yaw(&bsp_can1, 2);
-JC2804 motor_pitch(&bsp_can1, 1);
+jc2804 motor_yaw(&bsp_can1, 2);
+jc2804 motor_pitch(&bsp_can1, 1);
 
 
 /* 类静态成员赋值 */
 
-const float JC2804::VOLTAGE_SCALE     = 0.1f;
-const float JC2804::CURRENT_SCALE     = 0.01f;
-const float JC2804::SPEED_SCALE       = 0.01f;
-const float JC2804::POSITION_SCALE    = 0.01f;
-const float JC2804::TEMPERATURE_SCALE = 0.1f;
+const float jc2804::VOLTAGE_SCALE     = 0.1f;
+const float jc2804::CURRENT_SCALE     = 0.01f;
+const float jc2804::SPEED_SCALE       = 0.01f;
+const float jc2804::POSITION_SCALE    = 0.01f;
+const float jc2804::TEMPERATURE_SCALE = 0.1f;
 
 
 /**
@@ -59,7 +59,7 @@ const float JC2804::TEMPERATURE_SCALE = 0.1f;
  * @param can_interface can对象
  * @param device_id 偏移id
  */
-JC2804::JC2804(bsp_can* can_interface, uint8_t device_id)
+jc2804::jc2804(bsp_can* can_interface, uint8_t device_id)
 
   : _device_id(device_id),
     _last_request_type(NONE_REQUEST),
@@ -68,14 +68,14 @@ JC2804::JC2804(bsp_can* can_interface, uint8_t device_id)
 }
 
 // 析构函数
-JC2804::~JC2804()
+jc2804::~jc2804()
 {
 }
 
 /* 底层发送与请求跟踪 */
 
 // 异步发送函数
-void JC2804::send_async_command(uint8_t cmd, const uint8_t* data, uint8_t len)
+void jc2804::send_async_command(uint8_t cmd, const uint8_t* data, uint8_t len)
 {
   if (!_can || len > 8)
     return;
@@ -85,7 +85,7 @@ void JC2804::send_async_command(uint8_t cmd, const uint8_t* data, uint8_t len)
 }
 
 // 用于发送请求+记录请求类型，以便后续解析响应
-void JC2804::send_read_request(uint8_t cmd, uint16_t reg_addr, RequestType req_type)
+void jc2804::send_read_request(uint8_t cmd, uint16_t reg_addr, RequestType req_type)
 {
   uint8_t data[8] = {0};
   data[0]         = cmd;                    // 命令字
@@ -103,7 +103,7 @@ void JC2804::send_read_request(uint8_t cmd, uint16_t reg_addr, RequestType req_t
 /* 控制指令（写入）*/
 
 // 设置扭矩（电流）
-void JC2804::set_torque(float torque)
+void jc2804::set_torque(float torque)
 {
   // 文档 5.8: 命令字 0x2B, 寄存器 0x0020, 2字节有符号电流值（单位：A × 100）
   // 注意：文档描述为电流。这里按电流处理
@@ -122,7 +122,7 @@ void JC2804::set_torque(float torque)
 }
 
 // 设置速度
-void JC2804::set_speed(float speed)
+void jc2804::set_speed(float speed)
 {
   // 文档 5.9: 0x23 + reg 0x21, 4字节有符号速度（rpm × 100）
   int32_t spd_raw = static_cast<int32_t>(speed / SPEED_SCALE);
@@ -139,7 +139,7 @@ void JC2804::set_speed(float speed)
 }
 
 // 设置绝对位置
-void JC2804::set_absolute_position(float position)
+void jc2804::set_absolute_position(float position)
 {
   // 文档 5.10: 0x23 + reg 0x23, 4字节有符号位置（度 × 100）
   int32_t pos_raw = static_cast<int32_t>(position / POSITION_SCALE);
@@ -156,7 +156,7 @@ void JC2804::set_absolute_position(float position)
 }
 
 // 设置相对位置
-void JC2804::set_relative_position(float position)
+void jc2804::set_relative_position(float position)
 {
   // 文档 5.11: 0x23 + reg 0x25, 4字节有符号相对位置（度 × 100）
   int32_t pos_raw = static_cast<int32_t>(position / POSITION_SCALE);
@@ -173,7 +173,7 @@ void JC2804::set_relative_position(float position)
 }
 
 // 低速模式下设置低速
-void JC2804::set_low_speed(float speed)
+void jc2804::set_low_speed(float speed)
 {
   // 文档 5.12: 0x2B + reg 0x27, 2字节无符号低速（rpm）
   uint16_t spd_raw = static_cast<uint16_t>(speed); // 文档描述不清晰，假设为整数rpm
@@ -191,7 +191,7 @@ void JC2804::set_low_speed(float speed)
 }
 
 // 速度位置控制（不知道哪个模式可以用）
-void JC2804::pv_command(int32_t position, float speed)
+void jc2804::pv_command(int32_t position, float speed)
 {
   // 文档 5.13: 命令字 0x24
   // 数据格式：[cmd][pos H][M][L][L] (4B signed, ×100), [spd H][L] (2B unsigned rpm), [null]
@@ -211,7 +211,7 @@ void JC2804::pv_command(int32_t position, float speed)
 }
 
 // 速度位置力矩模式
-void JC2804::pvt_command(int32_t position, float speed, float torque_percent)
+void jc2804::pvt_command(int32_t position, float speed, float torque_percent)
 {
   // 文档 5.14: 命令字 0x25
   // 格式：[cmd][pos H][M][L][L] (4B pos ×100), [spd H][L] (2B speed rpm), [torque% (1B 0~100)]
@@ -243,7 +243,7 @@ void JC2804::pvt_command(int32_t position, float speed, float torque_percent)
  * 5 低速
  *
  */
-void JC2804::set_control_mode(uint8_t mode)
+void jc2804::set_control_mode(uint8_t mode)
 {
   // 文档 5.15: 0x2B + reg 0x60, 写入模式值（0~5）
   uint8_t data[8] = {
@@ -264,49 +264,49 @@ void JC2804::set_control_mode(uint8_t mode)
 /* 系统控制指令（5.16~5.22）*/
 
 // 系统空闲
-void JC2804::idle()
+void jc2804::idle()
 {
   uint8_t data[8] = {0x2B, 0x00, 0xA0, 0x00, 0x00, 0x01, 0x00, 0x00};
   send_async_command(0x2B, data, 8);
 }
 
 // 进入闭环模式
-void JC2804::enter_closed_loop()
+void jc2804::enter_closed_loop()
 {
   uint8_t data[8] = {0x2B, 0x00, 0xA2, 0x00, 0x00, 0x01, 0x00, 0x00};
   send_async_command(0x2B, data, 8);
 }
 
 // 擦除数据
-void JC2804::erase()
+void jc2804::erase()
 {
   uint8_t data[8] = {0x2B, 0x00, 0xA3, 0x00, 0x00, 0x01, 0x00, 0x00};
   send_async_command(0x2B, data, 8);
 }
 
 // 保存数据
-void JC2804::save()
+void jc2804::save()
 {
   uint8_t data[8] = {0x2B, 0x00, 0xA4, 0x00, 0x00, 0x01, 0x00, 0x00};
   send_async_command(0x2B, data, 8);
 }
 
 // 重启
-void JC2804::restart()
+void jc2804::restart()
 {
   uint8_t data[8] = {0x2B, 0x00, 0xA5, 0x00, 0x00, 0x01, 0x00, 0x00};
   send_async_command(0x2B, data, 8);
 }
 
 // 设置零点
-void JC2804::set_origin()
+void jc2804::set_origin()
 {
   uint8_t data[8] = {0x2B, 0x00, 0xA6, 0x00, 0x00, 0x01, 0x00, 0x00};
   send_async_command(0x2B, data, 8);
 }
 
 // 设置临时零点
-void JC2804::set_temporary_origin()
+void jc2804::set_temporary_origin()
 {
   uint8_t data[8] = {0x2B, 0x00, 0xA7, 0x00, 0x00, 0x01, 0x00, 0x00};
   send_async_command(0x2B, data, 8);
@@ -316,43 +316,43 @@ void JC2804::set_temporary_origin()
 /* 读取请求（修改：记录请求类型） */
 
 // 读取电压
-void JC2804::request_power_voltage()
+void jc2804::request_power_voltage()
 {
   send_read_request(0x4B, 0x0004, VOLTAGE_REQUEST);
 }
 
 // 读取？
-void JC2804::request_bus_current()
+void jc2804::request_bus_current()
 {
   send_read_request(0x4B, 0x0005, CURRENT_REQUEST);
 }
 
 // 读取实时速度
-void JC2804::request_real_time_speed()
+void jc2804::request_real_time_speed()
 {
   send_read_request(0x43, 0x0006, SPEED_REQUEST);
 }
 
 // 读取实时位置
-void JC2804::request_real_time_position()
+void jc2804::request_real_time_position()
 {
   send_read_request(0x43, 0x0008, POSITION_REQUEST);
 }
 
 // 读取驱动器温度
-void JC2804::request_driver_temperature()
+void jc2804::request_driver_temperature()
 {
   send_read_request(0x4B, 0x000A, DRIVER_TEMP_REQUEST);
 }
 
 // 读取电机温度
-void JC2804::request_motor_temperature()
+void jc2804::request_motor_temperature()
 {
   send_read_request(0x4B, 0x000B, MOTOR_TEMP_REQUEST);
 }
 
 // 读取错误日志
-void JC2804::request_error_info()
+void jc2804::request_error_info()
 {
   send_read_request(0x43, 0x000C, ERROR_INFO_REQUEST);
 }
@@ -360,7 +360,7 @@ void JC2804::request_error_info()
 /* 数据解析（修改：基于请求类型）*/
 
 // 解析数据
-void JC2804::store_received_data(uint8_t* data)
+void jc2804::store_received_data(uint8_t* data)
 {
   // 根据 _last_request_type 解析数据
   // 假设收到的响应数据格式符合文档描述
@@ -432,7 +432,7 @@ void JC2804::store_received_data(uint8_t* data)
 
 
 /* 响应验证（修改：简化逻辑，主要验证ID） */
-bool JC2804::validate_response(uint8_t expected_cmd, can_rx_msg_t* rx_msg)
+bool jc2804::validate_response(uint8_t expected_cmd, can_rx_msg_t* rx_msg)
 {
   uint32_t expected_id = 0x580 | _device_id; // 响应ID格式：0x580 + DeviceID
   if (rx_msg->header.Identifier != expected_id)
@@ -450,7 +450,7 @@ bool JC2804::validate_response(uint8_t expected_cmd, can_rx_msg_t* rx_msg)
 /* CAN 回调（修改：基于请求类型处理）*/
 
 // CAN回调调用内容
-void JC2804::on_can_message(can_rx_msg_t* rx_msg)
+void jc2804::on_can_message(can_rx_msg_t* rx_msg)
 {
   // 验证消息ID是否属于本设备
   if (!validate_response(0, rx_msg))
@@ -476,7 +476,7 @@ void JC2804::on_can_message(can_rx_msg_t* rx_msg)
 /* 获取最新数据（返回结构体）*/
 
 // 只有这个可以从类中获取数据 发起请求后才可以读取到数据 异步
-MotorData JC2804::get_latest_data_struct()
+MotorData jc2804::get_latest_data_struct()
 {
   MotorData data_copy = latest_data;
   return data_copy;

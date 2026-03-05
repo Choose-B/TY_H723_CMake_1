@@ -28,7 +28,7 @@ extern "C"
  * @brief 接收模式枚举
  *
  */
-enum class ReceiveMode
+enum class receive_mode
 {
   LATEST_ONLY   = 1, // 仅保留最新一次接收到的数据（使用消息邮箱）（不能开FIFO）
   SINGLE_BUFFER = 2, // 使用单个流缓冲区
@@ -46,7 +46,7 @@ private:
   osMessageQueueId_t   _msg_queue_id;               ///< CMSIS-RTOS2消息队列ID，用于LATEST_ONLY模式
   StreamBufferHandle_t _rx_stream_buffers[2];       ///< 接收流缓冲区数组，[0]为单缓冲或双缓冲第一个，[1]为双缓冲第二个
   StreamBufferHandle_t _tx_stream_buffer;           ///< FreeRTOS发送流缓冲区句柄
-  ReceiveMode          _receive_mode;               ///< 接收模式，指定数据接收策略
+  receive_mode          _receive_mode;               ///< 接收模式，指定数据接收策略
   bool                 _rx_active;                  ///< 接收状态标志，指示是否正在接收数据
   uint8_t              _rx_dma_buffer[BUFFER_SIZE]; ///< DMA接收缓冲区，用于多字节接收
   uint8_t              _tx_dma_buffer[BUFFER_SIZE]; ///< DMA发送缓冲区，用于多字节发送
@@ -71,7 +71,7 @@ public:
    * @param transmit_signal 是否启用发送功能
    * @param instance_id 实例ID，用于生成唯一资源名称
    */
-  bsp_usart(UART_HandleTypeDef *huart, ReceiveMode rx_mode, bool transmit_signal, int instance_id = 0);
+  bsp_usart(UART_HandleTypeDef *huart, receive_mode rx_mode, bool transmit_signal, int instance_id = 0);
 
   /**
    * @brief 初始化函数 初始化串口驱动对象，配置必要的FreeRTOS对象
@@ -92,7 +92,7 @@ public:
    * @param timeout 超时时间（ticks）
    * @return int 返回发送的数据字节数，负值表示错误
    */
-  int sendData(const uint8_t *data, size_t size, uint32_t timeout = osWaitForever);
+  int send(const uint8_t *data, size_t size, uint32_t timeout = osWaitForever);
 
   /**
    * @brief 接收数据 根据接收模式从相应的缓冲区读取数据
@@ -102,21 +102,21 @@ public:
    * @param timeout 超时时间（ticks）
    * @return int 实际读取的数据字节数，-1表示超时或无数据
    */
-  int receiveData(uint8_t *buffer, size_t size, uint32_t timeout = osWaitForever);
+  int receive(uint8_t *buffer, size_t size, uint32_t timeout = osWaitForever);
 
   /**
    * @brief 获取发送缓冲区剩余空间
    *
    * @return size_t 剩余空间大小
    */
-  size_t getTxFreeSpace();
+  size_t get_tx_free_space();
 
   /**
    * @brief 获取接收缓冲区可用数据量
    *
    * @return size_t 可用数据量
    */
-  size_t getRxAvailableData();
+  size_t get_rx_available_data();
 
   /**
    * @brief DMA传输完成回调函数 由HAL库调用，处理DMA传输完成事件
@@ -130,34 +130,34 @@ public:
    *
    * @param huart UART句柄
    */
-  void dmaErrorCallback(UART_HandleTypeDef *huart);
+  void dma_error_callback(UART_HandleTypeDef *huart);
 
   /**
    * @brief IDLE中断处理函数 处理由IDLE中断检测到的数据包
    *
    * @param received_length 接收到的数据长度
    */
-  void handleIdleInterrupt(uint32_t received_length);
+  void handle_idle_interrupt(uint32_t received_length);
 
   /**
    * @brief 内部IDLE中断处理函数 内部处理IDLE中断，自动计算接收到的数据长度
    *
    * @param huart UART句柄
    */
-  void handleIdleInterruptInternal(UART_HandleTypeDef *huart);
+  void handle_idle_interrupt_internal(UART_HandleTypeDef *huart);
 
 private:
   // 开始接收数据 启动DMA接收
-  void startReception();
+  void start_reception();
 
   // 清理资源 清理所有分配的资源
-  void cleanupResources();
+  void cleanup_resources();
 
   // 停止接收数据 停止DMA接收
-  void stopReception();
+  void stop_reception();
 
   // 开始传输数据 启动DMA发送
-  void startTransmission();
+  void start_transmission();
 
   /**
    * @brief 检查是否正在传输
@@ -165,16 +165,10 @@ private:
    * @return true 正在传输
    * @return false 未在传输
    */
-  bool isTransmitting();
-
-  // 处理接收完成事件 根据接收模式处理接收到的数据
-  void handleReceiveComplete();
-
-  // 处理发送完成事件 继续发送剩余数据或结束发送过程
-  void handleTransmitComplete();
+  bool is_transmitting();
 
   // 处理DMA错误 记录错误并尝试重新初始化
-  void handleDmaError();
+  void handle_dma_error();
 };
 
 

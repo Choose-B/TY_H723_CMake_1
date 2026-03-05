@@ -106,8 +106,8 @@ protocol_usart::protocol_usart(bsp_usart<256, 8> *uart_ptr, uint8_t name, uint8_
     tail(t)
 {
   // 初始化任务属性成员变量，使用实例特定的名称
-  snprintf(taskName, sizeof(taskName), "uart_protocol_%d", name);
-  task_attributes.name       = taskName;
+  snprintf(task_name, sizeof(task_name), "uart_protocol_%d", name);
+  task_attributes.name       = task_name;
   task_attributes.stack_size = 256 * 4; // 适当增加栈大小以处理协议解析
   task_attributes.priority   = (osPriority_t)osPriorityNormal;
 }
@@ -158,7 +158,7 @@ void protocol_usart::send(uint8_t cmd, uint8_t *data, uint8_t len)
   tx_buf[4 + len] = calculate_checksum(tx_buf, 4 + len);
   tx_buf[5 + len] = tail;
 
-  uart_instance->sendData(tx_buf, 6 + len, 10);
+  uart_instance->send(tx_buf, 6 + len, 10);
 }
 
 /**
@@ -170,7 +170,7 @@ void protocol_usart::protocol_handle_cmd()
   if (uart_instance == nullptr)
     return;
 
-  uart_instance->sendData(rx_frame.data, rx_frame.len);
+  uart_instance->send(rx_frame.data, rx_frame.len);
   uart_protocol_process_callback(uart_instance, &rx_frame);
 }
 
@@ -192,14 +192,14 @@ void protocol_usart::task(void *argument)
   for (;;)
   {
     // 1. 寻找帧头：先同步第一个包头
-    if (uart_instance->receiveData(&header_buf[0], 1, osWaitForever) <= 0)
+    if (uart_instance->receive(&header_buf[0], 1, osWaitForever) <= 0)
       continue;
     if (header_buf[0] != header1)
       continue;
 
     // 2. 读取剩余的帧头部分 (Header2, CMD, LEN)
     // 使用较短的超时时间，防止因发送端异常导致的死等
-    if (uart_instance->receiveData(&header_buf[1], 3, 10) < 3)
+    if (uart_instance->receive(&header_buf[1], 3, 10) < 3)
       continue;
 
     // 校验第二个包头
@@ -218,7 +218,7 @@ void protocol_usart::task(void *argument)
 
     // 4. 批量读取后续内容：Data + Checksum (1 byte) + Tail (1 byte)
     uint8_t remaining_len = rx_frame.len + 2;
-    if (uart_instance->receiveData(payload_buf, remaining_len, 20) < remaining_len)
+    if (uart_instance->receive(payload_buf, remaining_len, 20) < remaining_len)
     {
       continue;
     }

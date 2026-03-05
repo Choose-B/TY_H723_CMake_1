@@ -17,11 +17,11 @@ typedef struct
 class bsp_can
 {
 public:
-  osMessageQueueId_t rxQueueHandle; // CMSIS_OS2的队列
-  osMutexId_t        txMutexHandle; // CMSIS_OS2的互斥锁
+  osMessageQueueId_t rx_queue_handle; // CMSIS_OS2的队列
+  osMutexId_t        tx_mutex_handle; // CMSIS_OS2的互斥锁
 
-  // 构造函数，增加instanceId参数用于区分不同的实例
-  bsp_can(FDCAN_HandleTypeDef* hfdcan, int instanceId);
+  // 构造函数，增加instance_id参数用于区分不同的实例
+  bsp_can(FDCAN_HandleTypeDef* hfdcan, int instance_id);
 
   // 析构函数
   ~bsp_can();
@@ -37,7 +37,7 @@ public:
 
 private:
   FDCAN_HandleTypeDef* _hfdcan;        // CAN句柄
-  int                  _instanceId;    // 实例ID，
+  int                  _instance_id;    // 实例ID，
   char                 queue_name[32]; // 实例队列的名字，用于调试时看到名字
   char                 mutex_name[32]; // 实例互斥锁的名字，用于调试时看到名字
 };

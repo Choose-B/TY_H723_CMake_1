@@ -47,9 +47,9 @@ extern "C" void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef* hfdcan, uint32_t 
     if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &rxMsg.header, rxMsg.data) == HAL_OK)
     {
       // 注意：CMSIS osMessageQueuePut 在 ISR 中使用时，timeout 必须为 0
-      if (bsp_can1.rxQueueHandle != NULL)
+      if (bsp_can1.rx_queue_handle != NULL)
       {
-        osMessageQueuePut(bsp_can1.rxQueueHandle, &rxMsg, 0, 0);
+        osMessageQueuePut(bsp_can1.rx_queue_handle, &rxMsg, 0, 0);
       }
     }
     // 之后可拓展其他CAN......
@@ -78,30 +78,30 @@ extern "C" void HAL_FDCAN_TxBufferCompleteCallback(FDCAN_HandleTypeDef* hfdcan, 
  *
  * @param hfdcan 传入到构造函数的句柄
  */
-bsp_can::bsp_can(FDCAN_HandleTypeDef* hfdcan, int instanceId)
+bsp_can::bsp_can(FDCAN_HandleTypeDef* hfdcan, int instance_id)
 
   : _hfdcan(hfdcan),
-    _instanceId(instanceId)
+    _instance_id(instance_id)
 {
-  rxQueueHandle = NULL;
-  txMutexHandle = NULL;
+  rx_queue_handle = NULL;
+  tx_mutex_handle = NULL;
 }
 
 // 析构函数
 bsp_can::~bsp_can()
 {
   // 删除消息队列
-  if (rxQueueHandle != NULL)
+  if (rx_queue_handle != NULL)
   {
-    osMessageQueueDelete(rxQueueHandle);
-    rxQueueHandle = NULL;
+    osMessageQueueDelete(rx_queue_handle);
+    rx_queue_handle = NULL;
   }
 
   // 删除互斥锁
-  if (txMutexHandle != NULL)
+  if (tx_mutex_handle != NULL)
   {
-    osMutexDelete(txMutexHandle);
-    txMutexHandle = NULL;
+    osMutexDelete(tx_mutex_handle);
+    tx_mutex_handle = NULL;
   }
 
   // 停止FDCAN外设
@@ -115,7 +115,7 @@ bsp_can::~bsp_can()
 HAL_StatusTypeDef bsp_can::init()
 {
   // 创建 FreeRTOS 资源，使用实例ID作为唯一标识
-  snprintf(queue_name, sizeof(queue_name), "CAN%dRx_Queue", _instanceId);
+  snprintf(queue_name, sizeof(queue_name), "CAN%dRx_Queue", _instance_id);
 
   const osMessageQueueAttr_t queue_attr =
     {
@@ -126,9 +126,9 @@ HAL_StatusTypeDef bsp_can::init()
       .mq_mem    = NULL,
       .mq_size   = 0};
 
-  rxQueueHandle = osMessageQueueNew(16, sizeof(can_rx_msg_t), &queue_attr);
+  rx_queue_handle = osMessageQueueNew(16, sizeof(can_rx_msg_t), &queue_attr);
 
-  snprintf(mutex_name, sizeof(mutex_name), "CAN%dTx_Mutex", _instanceId);
+  snprintf(mutex_name, sizeof(mutex_name), "CAN%dTx_Mutex", _instance_id);
 
   const osMutexAttr_t mutex_attr =
     {
@@ -137,7 +137,7 @@ HAL_StatusTypeDef bsp_can::init()
       .cb_mem    = NULL,
       .cb_size   = 0};
 
-  txMutexHandle = osMutexNew(&mutex_attr);
+  tx_mutex_handle = osMutexNew(&mutex_attr);
 
   // 2. FDCAN 硬件配置 (过滤器等)
   FDCAN_FilterTypeDef sFilterConfig;
@@ -241,9 +241,9 @@ HAL_StatusTypeDef bsp_can::send(uint32_t stdId, uint8_t* pData, uint8_t len)
   txHeader.MessageMarker       = stdId; // 使用ID作为消息标记
 
   // 使用互斥锁防止多任务同时写发送寄存器
-  if (txMutexHandle != NULL)
+  if (tx_mutex_handle != NULL)
   {
-    osMutexAcquire(txMutexHandle, osWaitForever);
+    osMutexAcquire(tx_mutex_handle, osWaitForever);
   }
 
   // 检查 FIFO 是否有空间，如果有这个问题的去加大发送区域fifo
@@ -255,9 +255,9 @@ HAL_StatusTypeDef bsp_can::send(uint32_t stdId, uint8_t* pData, uint8_t len)
   {
     if (++timeoutCount > maxTimeout)
     {
-      if (txMutexHandle != NULL)
+      if (tx_mutex_handle != NULL)
       {
-        osMutexRelease(txMutexHandle);
+        osMutexRelease(tx_mutex_handle);
       }
       return HAL_TIMEOUT; // 超时返回
     }
@@ -266,9 +266,9 @@ HAL_StatusTypeDef bsp_can::send(uint32_t stdId, uint8_t* pData, uint8_t len)
 
   HAL_StatusTypeDef status = HAL_FDCAN_AddMessageToTxFifoQ(_hfdcan, &txHeader, pData);
 
-  if (txMutexHandle != NULL)
+  if (tx_mutex_handle != NULL)
   {
-    osMutexRelease(txMutexHandle);
+    osMutexRelease(tx_mutex_handle);
   }
   return status;
 }
@@ -287,9 +287,9 @@ HAL_StatusTypeDef bsp_can::send(uint32_t stdId, uint8_t* pData, uint8_t len)
 osStatus_t bsp_can::receive(can_rx_msg_t* msg, uint32_t timeout)
 {
   // 封装 CMSIS 队列接收
-  if (rxQueueHandle == NULL)
+  if (rx_queue_handle == NULL)
   {
     return osErrorResource;
   }
-  return osMessageQueueGet(rxQueueHandle, msg, NULL, timeout);
+  return osMessageQueueGet(rx_queue_handle, msg, NULL, timeout);
 }

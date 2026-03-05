@@ -19,16 +19,16 @@ struct MotorData
 
 
 /* 类定义 */
-class JC2804
+class jc2804
 {
 public:
   /* 构造与初始化 */
 
   // 构造函数
-  JC2804(bsp_can* can_interface, uint8_t device_id);
+  jc2804(bsp_can* can_interface, uint8_t device_id);
 
   // 析构函数
-  ~JC2804();
+  ~jc2804();
 
   /* 公有成员变量（外部要使用 懒得封装） */
 
@@ -198,8 +198,8 @@ private:
 
 /* 全局变量声明处 */
 
-extern JC2804 motor_pitch;
-extern JC2804 motor_yaw;
+extern jc2804 motor_pitch;
+extern jc2804 motor_yaw;
 
 
 #endif // __JC2804_HPP__

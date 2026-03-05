@@ -38,7 +38,7 @@ private:
   uint8_t            header1;         // 自定义帧头1
   uint8_t            header2;         // 自定义帧头2
   uint8_t            tail;            // 自定义帧尾
-  char               taskName[32];    // 任务名称
+  char               task_name[32];    // 任务名称
   osThreadAttr_t     task_attributes; // 任务属性成员变量
 
   /**
