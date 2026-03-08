@@ -6,6 +6,7 @@
  * @date 2026-02-11
  *
  * @todo 此处只写了CAN1，以后要是有帮忙写下CAN2,CAN3。以及CANFD的就更好了
+ *       以及CAN绑定协议处理 多个CAN的处理 CAN滤波器 的部分写的还是不够好 希望后人能修改
  *
  * @copyright Copyright (c) 2026
  *

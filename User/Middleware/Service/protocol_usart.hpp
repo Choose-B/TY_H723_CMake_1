@@ -2,9 +2,9 @@
 #define __PROTOCOL_USART_HPP__
 
 
-#include "stdint.h"
-#include "stddef.h"
 #include "cmsis_os2.h"
+#include "stddef.h"
+#include "stdint.h"
 
 
 /* 前向声明 */
@@ -38,7 +38,7 @@ private:
   uint8_t            header1;         // 自定义帧头1
   uint8_t            header2;         // 自定义帧头2
   uint8_t            tail;            // 自定义帧尾
-  char               task_name[32];    // 任务名称
+  char               task_name[32];   // 任务名称
   osThreadAttr_t     task_attributes; // 任务属性成员变量
 
   /**
@@ -86,11 +86,11 @@ public:
 
 
 /* 声明全局类实例化对象 */
-extern protocol_usart protocal_uart_6;
+extern protocol_usart protocal_uart_9;
 
 
 /* 任务函数需要extern "C"封装，会有多个任务函数 */
-extern "C" void _uart_protocol_task6(void *argument);
+extern "C" void _uart_protocol_task9(void *argument);
 
 
 #endif // __PROTOCOL_USART_HPP__

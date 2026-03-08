@@ -174,7 +174,9 @@ private:
 
 // 外部声明这些类实例化的对象
 
-extern bsp_usart<256, 8> bsp_usart6;
+extern bsp_usart<256,8> bsp_usart6;
+extern bsp_usart<256, 8> bsp_usart9;
+
 
 #endif // __cplusplus
 

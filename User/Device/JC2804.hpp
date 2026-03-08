@@ -32,7 +32,7 @@ public:
 
   /* 公有成员变量（外部要使用 懒得封装） */
 
-  uint8_t _device_id;
+  uint32_t _device_id;
 
 
   /* 控制指令（写入） */

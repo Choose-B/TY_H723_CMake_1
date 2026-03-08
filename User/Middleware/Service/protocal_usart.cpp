@@ -6,6 +6,8 @@
  * @version 0.1
  * @date 2026-02-17
  *
+ * @todo 绑定协议处理任务的方式和分别协议处理的方式有些原始，希望后人可以修改
+ *
  * @copyright Copyright (c) 2026
  *
  */
@@ -50,14 +52,15 @@
 
 /* 全局类对象实例化 */
 
-protocol_usart protocal_uart_6(&bsp_usart6, 6);
+protocol_usart protocal_uart_9(&bsp_usart9, 9);
+
 
 
 /* C接口函数实现(FreeRTOS)，因为每一个协议的处理方式都不一样，因此得extern好几个 */
 
-extern "C" void _uart_protocol_task6(void *argument)
+extern "C" void _uart_protocol_task9(void *argument)
 {
-  protocal_uart_6.task(argument);
+  protocal_uart_9.task(argument);
 }
 
 
@@ -71,8 +74,9 @@ extern "C" void _uart_protocol_task6(void *argument)
  */
 static void uart_protocol_process_callback(bsp_usart<256, 8> *cur_uart, protocol_frame_t *rx_frame)
 {
-  if (cur_uart == &bsp_usart6)
+  if (cur_uart == &bsp_usart9)
   {
+    bsp_usart6.send(rx_frame->data,rx_frame->len);
     // 具体的指令码，以及数据解析，如果到时候真的需要，可以写互斥锁来保护临界区资源，也可以自定义枚举量
     switch (rx_frame->cmd)
     {
@@ -170,8 +174,8 @@ void protocol_usart::protocol_handle_cmd()
   if (uart_instance == nullptr)
     return;
 
-  uart_instance->send(rx_frame.data, rx_frame.len);
   uart_protocol_process_callback(uart_instance, &rx_frame);
+  
 }
 
 /**
@@ -199,7 +203,7 @@ void protocol_usart::task(void *argument)
 
     // 2. 读取剩余的帧头部分 (Header2, CMD, LEN)
     // 使用较短的超时时间，防止因发送端异常导致的死等
-    if (uart_instance->receive(&header_buf[1], 3, 10) < 3)
+    if (uart_instance->receive(&header_buf[1], 3, 1000) < 3)
       continue;
 
     // 校验第二个包头
@@ -218,7 +222,7 @@ void protocol_usart::task(void *argument)
 
     // 4. 批量读取后续内容：Data + Checksum (1 byte) + Tail (1 byte)
     uint8_t remaining_len = rx_frame.len + 2;
-    if (uart_instance->receive(payload_buf, remaining_len, 20) < remaining_len)
+    if (uart_instance->receive(payload_buf, remaining_len, 1000) < remaining_len)
     {
       continue;
     }

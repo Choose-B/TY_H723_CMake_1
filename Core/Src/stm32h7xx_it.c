@@ -57,10 +57,13 @@
 
 /* External variables --------------------------------------------------------*/
 extern FDCAN_HandleTypeDef hfdcan1;
+extern DMA_HandleTypeDef hdma_uart9_rx;
+extern DMA_HandleTypeDef hdma_uart9_tx;
 extern DMA_HandleTypeDef hdma_usart1_tx;
 extern DMA_HandleTypeDef hdma_usart1_rx;
 extern DMA_HandleTypeDef hdma_usart6_tx;
 extern DMA_HandleTypeDef hdma_usart6_rx;
+extern UART_HandleTypeDef huart9;
 extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart6;
 extern TIM_HandleTypeDef htim1;
@@ -224,6 +227,34 @@ void DMA1_Stream3_IRQHandler(void)
 }
 
 /**
+  * @brief This function handles DMA1 stream4 global interrupt.
+  */
+void DMA1_Stream4_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA1_Stream4_IRQn 0 */
+
+  /* USER CODE END DMA1_Stream4_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_uart9_rx);
+  /* USER CODE BEGIN DMA1_Stream4_IRQn 1 */
+
+  /* USER CODE END DMA1_Stream4_IRQn 1 */
+}
+
+/**
+  * @brief This function handles DMA1 stream5 global interrupt.
+  */
+void DMA1_Stream5_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA1_Stream5_IRQn 0 */
+
+  /* USER CODE END DMA1_Stream5_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_uart9_tx);
+  /* USER CODE BEGIN DMA1_Stream5_IRQn 1 */
+
+  /* USER CODE END DMA1_Stream5_IRQn 1 */
+}
+
+/**
   * @brief This function handles FDCAN1 interrupt 0.
   */
 void FDCAN1_IT0_IRQHandler(void)
@@ -278,6 +309,20 @@ void USART6_IRQHandler(void)
   idle_iqr_handler(&huart6);
 
   /* USER CODE END USART6_IRQn 1 */
+}
+
+/**
+  * @brief This function handles UART9 global interrupt.
+  */
+void UART9_IRQHandler(void)
+{
+  /* USER CODE BEGIN UART9_IRQn 0 */
+
+  /* USER CODE END UART9_IRQn 0 */
+  HAL_UART_IRQHandler(&huart9);
+  /* USER CODE BEGIN UART9_IRQn 1 */
+  idle_iqr_handler(&huart9);
+  /* USER CODE END UART9_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */

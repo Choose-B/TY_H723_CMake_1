@@ -7,6 +7,8 @@
  *
  * @todo 回调函数中只写了UART6，具体的其他函数处理需要自己添加进来，或者使用更先进的方式
  *
+ * @todo @bug 发现同时收发的时候可以发，不能收。收不到的原因是未进IDLE中断
+ *
  * @copyright Copyright (c) 2026
  *
  */
@@ -73,6 +75,22 @@ extern "C"
  */
 void idle_iqr_handler(UART_HandleTypeDef *huart)
 {
+  // 强制检查并清除错误标志 测试发现有一点点意义 但是不知道原因（
+  if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_ORE) != RESET)
+  {
+    __HAL_UART_CLEAR_FLAG(&huart1, UART_CLEAR_OREF);
+
+    // 写这个的原因是他会直接重启接收
+    if (huart == &huart6)
+    {
+      bsp_usart6.handle_idle_interrupt_internal(huart); // 让类内部处理DMA计数器和BUFFER_SIZE
+    }
+    else if (huart == &huart9)
+    {
+      bsp_usart9.handle_idle_interrupt_internal(huart);
+    }
+  }
+
   // 检查是否是IDLE中断
   if ((__HAL_UART_GET_FLAG(huart, UART_FLAG_IDLE) != RESET) && (__HAL_UART_GET_IT_SOURCE(huart, UART_IT_IDLE) != RESET))
   {
@@ -84,11 +102,15 @@ void idle_iqr_handler(UART_HandleTypeDef *huart)
     {
       bsp_usart6.handle_idle_interrupt_internal(huart); // 让类内部处理DMA计数器和BUFFER_SIZE
     }
-    else
+    else if (huart == &huart9)
+    {
+      bsp_usart9.handle_idle_interrupt_internal(huart);
+    }
     {
       // 其他UART句柄的处理
     }
   }
+
 }
 
 
@@ -99,6 +121,8 @@ template class bsp_usart<256, 8>;
 
 // __attribute__((section(".dma_buffer"))) bsp_usart<256, 8> bsp_usart6(&huart6, bsp_usart<256, 8>::receive_mode::LATEST_ONLY, true);
 __attribute__((section(".dma_buffer"))) bsp_usart<256, 8> bsp_usart6(&huart6, receive_mode::SINGLE_BUFFER, true, 6); // 添加实例ID为6
+__attribute__((section(".dma_buffer"))) bsp_usart<256, 8> bsp_usart9(&huart9, receive_mode::SINGLE_BUFFER, true, 9); // 添加实例ID为6
+
 // __attribute__((section(".dma_buffer"))) bsp_usart<256, 8> bsp_usart6(&huart6, bsp_usart<256, 8>::receive_mode::DOUBLE_BUFFER, true);
 
 
@@ -185,7 +209,7 @@ bool bsp_usart<BUFFER_SIZE, MSG_SIZE>::init()
     if (_msg_queue_id == nullptr)
     {
       cleanup_resources(); // 清理已创建的资源
-      return false;       // 消息队列创建失败
+      return false;        // 消息队列创建失败
     }
   }
   else
@@ -207,7 +231,7 @@ bool bsp_usart<BUFFER_SIZE, MSG_SIZE>::init()
       if (_rx_stream_buffers[0] == nullptr)
       {
         cleanup_resources(); // 清理已创建的资源
-        return false;       // 流缓冲区创建失败
+        return false;        // 流缓冲区创建失败
       }
       break;
     case receive_mode::DOUBLE_BUFFER:
@@ -216,14 +240,14 @@ bool bsp_usart<BUFFER_SIZE, MSG_SIZE>::init()
       if (_rx_stream_buffers[0] == nullptr)
       {
         cleanup_resources(); // 清理已创建的资源
-        return false;       // 流缓冲区创建失败
+        return false;        // 流缓冲区创建失败
       }
 
       _rx_stream_buffers[1] = xStreamBufferCreate(BUFFER_SIZE, 1);
       if (_rx_stream_buffers[1] == nullptr)
       {
         cleanup_resources(); // 清理已创建的资源
-        return false;       // 流缓冲区创建失败
+        return false;        // 流缓冲区创建失败
       }
       break;
     case receive_mode::LATEST_ONLY:
@@ -239,7 +263,7 @@ bool bsp_usart<BUFFER_SIZE, MSG_SIZE>::init()
     if (_tx_stream_buffer == nullptr)
     {
       cleanup_resources(); // 清理已创建的资源
-      return false;       // 发送流缓冲区创建失败
+      return false;        // 发送流缓冲区创建失败
     }
   }
   else
