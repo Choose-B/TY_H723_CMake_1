@@ -1,11 +1,28 @@
 /**
- * @file dm_imu.hpp
+ * @file dm_imu.cpp
  * @author Rh
- * @brief 使用bsp_can接口封装的DM IMU类声明
+ * @brief 使用bsp_can接口封装的DM IMU类实现
  * @version 0.1
  * @date 2026-03-02
  *
  * @copyright Copyright (c) 2026
+ *
+ *
+ * @brief 使用示例,需要在bsp_can
+ *
+ * @note 类的实例化，以及初始化
+ *
+ *  dm_imu imu_bmi088(&bsp_can1, 0x58, 0x59); // 全局实例化类
+ *  imu_bmi088.init();                        // 需要在freertos内核开启之后去init
+ *
+ * @note 在CAN接收后处理任务中，添加对应的处理函数
+ *
+ *  imu_bmi088.on_can_message(&rx_msg); // 类似中断回调
+ *
+ * @note extern好之后 直接使用
+ *
+ *  imu_bmi088.change_to_active();                     // 主动发送数据
+ *  imu_data user_imu_data = imu_bmi088.get_imu_data() // 读取数据
  *
  */
 

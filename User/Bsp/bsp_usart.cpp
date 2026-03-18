@@ -1,50 +1,67 @@
-/**
- * @file bsp_usart.cpp
- * @author Rh
- * @brief 实现了一个简易的串口驱动（FreeRTOS）（只接收最新数据不能用FIFO）
- * @version 0.1
- * @date 2026-02-08
- *
- * @todo 回调函数中只写了UART6，具体的其他函数处理需要自己添加进来，或者使用更先进的方式
- *
- * @copyright Copyright (c) 2026
- *
- */
-
-/**
- * @brief 使用示例：（必须要在freertos的任务中运行收发 中断中不行 中断不能阻塞）
-         （使用的IDLE中断进行接收 发送也是同理）
- *
- * @note 模板实例化实现 以及类的实例化 第一个数字为缓冲区大小（uint8_t） 第二个数字为消息队列的长度（uint8_t）
- *
- *   // 全局实例化模板
- *   template class bsp_usart<256, 8>;
- *
- *   // 全局实例化类
- *   __attribute__((section(".dma_buffer")))
- *   bsp_usart<256, 8> bsp_usart6(&huart6, receive_mode::LATEST_ONLY, true);
- *
- *   bsp_usart6.init();                              // 需要freertos内核初始化成功之后使用
- *
- * @note extern好之后，在任务中使用
- *
- *    bsp_usart6.receive(buffer,8,osWaitForever); // 这样就存到buffer中了 时间是一直等
- *    bsp_usart6.send(buffer,8);                  // 就把buffer中的数据发送出去了
- *
- */
-
 #include "bsp_usart.hpp"
 #include "string.h"
 #include <stdio.h>
 
+/* USER CODE BEGIN */
 
 /* 声明串口句柄 */
-
 extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart6;
 
-#define PRINT_UART &huart6
+/**
+ * @brief IDLE串口回调函数
+ * @note extern "C" 的原因是，这些函数是覆盖在原来weak弱定义上的，不能被cpp进行名称修饰
+ */
+extern "C"
+{
+  void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+  {
+    // 强制检查并清除错误标志，每次发都会进clear？测试发现会解决一段时间的异常，但是还是会出问题
+    if (__HAL_UART_GET_FLAG(huart, UART_FLAG_ORE) != RESET)
+    {
+      __HAL_UART_CLEAR_OREFLAG(huart);
+    }
+  
+    // 写不了switch case
+    if (huart == &huart6)
+    {
+      // 让类内部处理DMA计数器和BUFFER_SIZE 以及错误处理
+      bsp_usart6.handle_idle_interrupt_internal(huart, Size);
+    }
+    else if (huart == &huart9)
+    {
+      bsp_usart9.handle_idle_interrupt_internal(huart, Size);
+    }
+    else
+    {
+      // 其他UART句柄的处理
+    }
+  }
+}
 
+/**
+ * @brief 模板实例化实现
+ * @param 第一个数字为缓冲区大小（uint8_t）
+ * @param 第二个数字为消息队列的长度（uint8_t） 
+ *
+ */
+template class bsp_usart<256, 8>;
+
+/**
+ * @brief 全局实例化 
+ * @param 第一个串口句柄
+ * @param 第二个是串口接收模式
+ * @param 第三个是是否启用发送逻辑
+ * @note 这个 __attribute__((section(".dma_buffer"))) 是把他放到dtcm区域外，在.ld格式文件下实现的
+ *
+ */
+__attribute__((section(".dma_buffer"))) bsp_usart<256, 8> bsp_usart6(&huart6, receive_mode::SINGLE_BUFFER, true, 6); // 添加实例ID为6
+__attribute__((section(".dma_buffer"))) bsp_usart<256, 8> bsp_usart9(&huart9, receive_mode::SINGLE_BUFFER, true, 9); // 添加实例ID为6
+
+/* USER CODE END */
+
+
+#define PRINT_UART &huart6
 
 /**
  * @brief ARM_GCC UART6 串口重定向、但阻塞 (printf)、使用了cubemx自带的设置，为重定向自动加锁
@@ -65,74 +82,8 @@ extern "C"
   }
 }
 
-
 /**
- * @brief 此函数为IDLE中断触发函数，需要添加到it.c中，从而实现IDLE中断回调。在.h中extern "C"
- *
- * @param huart
- */
-void idle_iqr_handler(UART_HandleTypeDef *huart)
-{
-  // 检查是否是IDLE中断
-  if ((__HAL_UART_GET_FLAG(huart, UART_FLAG_IDLE) != RESET) && (__HAL_UART_GET_IT_SOURCE(huart, UART_IT_IDLE) != RESET))
-  {
-    // 清除IDLE中断标志
-    __HAL_UART_CLEAR_IDLEFLAG(huart);
-
-    // 写不了switch case
-    if (huart == &huart6)
-    {
-      // 让类内部处理DMA计数器和BUFFER_SIZE 以及错误处理
-      bsp_usart6.handle_idle_interrupt_internal(huart); 
-    }
-    else if (huart == &huart9)
-    {
-      bsp_usart9.handle_idle_interrupt_internal(huart);
-    }
-    else
-    {
-      // 其他UART句柄的处理
-    }
-  }
-
-  // 强制检查并清除错误标志，每次发都会进clear？测试发现会解决一段时间的异常，但是还是会出问题
-  if (__HAL_UART_GET_FLAG(huart, UART_FLAG_ORE) != RESET)
-  {
-    __HAL_UART_CLEAR_OREFLAG(huart);
-    __HAL_UART_CLEAR_IDLEFLAG(huart);
-
-    // 写不了switch case
-    if (huart == &huart6)
-    {
-      // 让类内部处理DMA计数器和BUFFER_SIZE 以及错误处理
-      bsp_usart6.handle_idle_interrupt_internal(huart); // 让类内部处理DMA计数器和BUFFER_SIZE
-    }
-    else if (huart == &huart9)
-    {
-      bsp_usart9.handle_idle_interrupt_internal(huart);
-    }
-    else
-    {
-      // 其他UART句柄的处理
-    }
-  }
-}
-
-
-/* 模板实例化实现 以及类的实例化 第一个数字为缓冲区大小（uint8_t） 第二个数字为消息队列的长度（uint8_t） 参数第一个串口句柄 第二个是模式 第三个是是否启用发送逻辑 */
-template class bsp_usart<256, 8>;
-
-// 这个 __attribute__((section(".dma_buffer"))) 是把他放到dtcm区域外，在.ld格式文件下实现的
-
-// __attribute__((section(".dma_buffer"))) bsp_usart<256, 8> bsp_usart6(&huart6, bsp_usart<256, 8>::receive_mode::LATEST_ONLY, true);
-__attribute__((section(".dma_buffer"))) bsp_usart<256, 8> bsp_usart6(&huart6, receive_mode::SINGLE_BUFFER, true, 6); // 添加实例ID为6
-__attribute__((section(".dma_buffer"))) bsp_usart<256, 8> bsp_usart9(&huart9, receive_mode::SINGLE_BUFFER, true, 9); // 添加实例ID为6
-
-// __attribute__((section(".dma_buffer"))) bsp_usart<256, 8> bsp_usart6(&huart6, bsp_usart<256, 8>::receive_mode::DOUBLE_BUFFER, true);
-
-
-/**
- * @brief 以下是 bsp_usart<BUFFER_SIZE, MSG_SIZE>::bsp_usart 这个类的函数定义
+ * @brief 以下是 bsp_usart<BUFFER_SIZE, MSG_SIZE>::bsp_usart 这个类的函数定义，看到这就可以不看了
  *
  * 串口驱动组件实现：（只使用了IDLE中断，其他未使用）
  * 设计要点：使用FreeRTOS的流缓冲区，实现单缓冲区和多缓冲区的处理
@@ -479,7 +430,7 @@ template <size_t BUFFER_SIZE, size_t MSG_SIZE>
 void bsp_usart<BUFFER_SIZE, MSG_SIZE>::start_reception()
 {
   // 启动多字节DMA接收
-  HAL_UART_Receive_DMA(_huart, _rx_dma_buffer, BUFFER_SIZE);
+  HAL_UARTEx_ReceiveToIdle_DMA(_huart, _rx_dma_buffer, BUFFER_SIZE);
   _rx_active = true;
 }
 
@@ -558,7 +509,7 @@ void bsp_usart<BUFFER_SIZE, MSG_SIZE>::handle_idle_interrupt(uint32_t received_l
       // 重新启动DMA接收
       if (_rx_active)
       {
-        HAL_UART_Receive_DMA(_huart, _rx_dma_buffer, BUFFER_SIZE);
+        HAL_UARTEx_ReceiveToIdle_DMA(_huart, _rx_dma_buffer, BUFFER_SIZE);
       }
     }
     break;
@@ -591,7 +542,7 @@ void bsp_usart<BUFFER_SIZE, MSG_SIZE>::handle_idle_interrupt(uint32_t received_l
       // 3. 重新启动接收
       if (_rx_active)
       {
-        HAL_UART_Receive_DMA(_huart, _rx_dma_buffer, BUFFER_SIZE);
+        HAL_UARTEx_ReceiveToIdle_DMA(_huart, _rx_dma_buffer, BUFFER_SIZE);
       }
     }
     break;
@@ -602,18 +553,18 @@ void bsp_usart<BUFFER_SIZE, MSG_SIZE>::handle_idle_interrupt(uint32_t received_l
 
 // IDLE中断处理函数
 template <size_t BUFFER_SIZE, size_t MSG_SIZE>
-void bsp_usart<BUFFER_SIZE, MSG_SIZE>::handle_idle_interrupt_internal(UART_HandleTypeDef *huart)
+void bsp_usart<BUFFER_SIZE, MSG_SIZE>::handle_idle_interrupt_internal(UART_HandleTypeDef *huart, uint16_t Size)
 {
   // 获取DMA剩余计数值，计算已接收的数据长度
   uint32_t dma_counter     = __HAL_DMA_GET_COUNTER(huart->hdmarx);
   uint32_t received_length = BUFFER_SIZE - dma_counter;
 
   // 处理接收到的数据包
-  if (received_length > 0)
+  if (Size > 0)
   {
-    handle_idle_interrupt(received_length);
+    handle_idle_interrupt(Size);
   }
-  else 
+  else if(received_length != Size)
   {
     dma_error_callback(huart);
   }

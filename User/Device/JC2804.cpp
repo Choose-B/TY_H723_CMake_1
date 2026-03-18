@@ -1,50 +1,14 @@
-/**
- * @file jc2804.cpp
- * @author Rh
- * @brief 这是一个俱瓷科技的jc2804的电机驱动
- *        使用的是原本封装好的bsp_can和FreeRTOS
- *        多数功能已经测试，功能90%完善
- *        适用于电赛云台，价格100左右
- *        目前只测试了写数据，没读数据
- * @version 0.1
- * @date 2026-02-13
- *
- * @todo 感觉半辈子用不上他的返回报文功能，直接发就行，用视觉闭环。
- *       电机内部会自己闭环
- *
- * @copyright Copyright (c) 2026
- *
- */
-
-/**
- * @brief 使用示例：
- *
- * @note 初始化
- *
- *   jc2804 motor_yaw(&bsp_can1, 2);    // 创建类对象（提前创建好bsp）
- *   motor_yaw.init();                  // 初始化电机 在内核初始化之后使用
- *   motor_yaw.on_can_message(&rx_msg); // 在canrx回调处理任务中调用
- *
- * @note 任务调用，大概时间间隔要自己测，2ms一次发送数据是极限
- *
- *   motor_yaw.enter_closed_loop(); // 进入闭环模式
- *   osDelay(100);
- *   motor_yaw.set_control_mode(1); // 进入速度模式
- *   osDelay(100);
- *   motor_yaw.set_speed(0);        // 设置速度0 防止疯
- *   osDelay(100);
- *
- *   motor_yaw.set_speed(100);      // 设置速度100 正常操控 其他模式同理
- *
- */
-
 #include "jc2804.hpp"
 
+
+/* USER CODE BEGIN */
 
 /* 全局类成员实例化 实例化需要传入can对象和偏移id */
 
 jc2804 motor_yaw(&bsp_can1, 2);
 jc2804 motor_pitch(&bsp_can1, 1);
+
+/* USER CODE END */
 
 
 /* 类静态成员赋值 */

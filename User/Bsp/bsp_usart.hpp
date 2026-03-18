@@ -1,3 +1,36 @@
+/**
+ * @file bsp_usart.cpp
+ * @author Rh
+ * @brief 实现了一个简易的串口驱动（FreeRTOS）（只接收最新数据不能用FIFO）
+ * @version 0.1
+ * @date 2026-02-08
+ *
+ * @todo 回调函数中只写了UART6，具体的其他函数处理需要自己添加进来，或者使用更先进的方式
+ *
+ * @copyright Copyright (c) 2026
+ *
+ *
+ * @details 使用示例：（必须要在freertos的任务中运行收发 中断中不行 中断不能阻塞）
+           （使用的IDLE中断进行接收 发送也是同理）
+ *
+ * @note 模板实例化实现 以及类的实例化 第一个数字为缓冲区大小（uint8_t） 第二个数字为消息队列的长度（uint8_t）
+ *
+ *   // 全局实例化模板
+ *   template class bsp_usart<256, 8>;
+ *
+ *   // 全局实例化类
+ *   __attribute__((section(".dma_buffer")))
+ *   bsp_usart<256, 8> bsp_usart6(&huart6, receive_mode::LATEST_ONLY, true);
+ *
+ *   bsp_usart6.init();                              // 需要freertos内核初始化成功之后使用
+ *
+ * @note extern好之后，在任务中使用
+ *
+ *    bsp_usart6.receive(buffer,8,osWaitForever); // 这样就存到buffer中了 时间是一直等
+ *    bsp_usart6.send(buffer,8);                  // 就把buffer中的数据发送出去了
+ *
+ */
+
 #ifndef __BSP_USART_HPP__
 #define __BSP_USART_HPP__
 
@@ -6,23 +39,6 @@
 #include "cmsis_os2.h"
 #include "stream_buffer.h"
 
-
-// C风格编译此部分（因为需要在stm32h7_it.c中调用）
-#if __cplusplus
-extern "C"
-{
-#endif // __cplusplus
-
-  void idle_iqr_handler(UART_HandleTypeDef *huart);
-
-#if __cplusplus
-}
-#endif // __cplusplus
-
-
-// CPP才可编译此部分（因为需要在stm32h7_it.c中调用）
-// 最下面有类实现的对象的extern位置，当然extern可以在别的地方写。定义在.cpp中
-#if __cplusplus
 
 /**
  * @brief 接收模式枚举
@@ -144,7 +160,7 @@ public:
    *
    * @param huart UART句柄
    */
-  void handle_idle_interrupt_internal(UART_HandleTypeDef *huart);
+  void handle_idle_interrupt_internal(UART_HandleTypeDef *huart,uint16_t Size);
 
 private:
   // 开始接收数据 启动DMA接收
@@ -176,9 +192,6 @@ private:
 
 extern bsp_usart<256,8> bsp_usart6;
 extern bsp_usart<256, 8> bsp_usart9;
-
-
-#endif // __cplusplus
 
 
 #endif // __BSP_USART_HPP__

@@ -1,50 +1,19 @@
-/**
- * @file bsp_can.cpp
- * @author Rh
- * @brief 实现了一个简易的CAN2.0收发驱动。
- * @version 0.1
- * @date 2026-02-11
- *
- * @todo 此处只写了CAN1，以后要是有帮忙写下CAN2,CAN3。以及CANFD的就更好了
- *       以及CAN绑定协议处理 多个CAN的处理 CAN滤波器 的部分写的还是不够好 希望后人能修改
- *
- * @copyright Copyright (c) 2026
- *
- */
-
-/**
- * @brief 使用示例（必须要在freertos的任务中运行收发 中断中不要进行此操作 中断不能阻塞）
- *
- * @note 类的实例化 以及初始化
- *
- *   bsp_can bsp_can1(&hfdcan1); // 全局实例化类
- *   bsp_can1.init();            // 需要在freertos内核开启之后去init
- *   can_rx_msg_t can1_msg;      // 实例化一个接收消息用的msg
- *
- * @note extern好之后，在任务中使用
- *
- *   bsp_can1.send(0x602, data1, 8);           // 发送报头为0x602，数组指针为data1，长度为8（uint8_t）
- *   bsp_can1.receive(&can1_msg,osWaitForever) // 使用此结构体接收数据，等待时间无穷久，使用中断接收
- *
- */
-
 #include "bsp_can.hpp"
 #include <stdio.h>
 #include <string.h>
 
-/* 全局实例化类对象 */
+/* USER CODE BEGIN */
 
+/* 全局实例化类对象 */
 bsp_can bsp_can1(&hfdcan1, 1);
 
-
 /* 中断回调函数 */
-
 // 接收完成中断回调
 extern "C" void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef* hfdcan, uint32_t RxFifo0ITs)
 {
+  can_rx_msg_t rxMsg;
   if ((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != 0)
   {
-    can_rx_msg_t rxMsg;
     if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &rxMsg.header, rxMsg.data) == HAL_OK)
     {
       // 注意：CMSIS osMessageQueuePut 在 ISR 中使用时，timeout 必须为 0
@@ -53,11 +22,13 @@ extern "C" void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef* hfdcan, uint32_t 
         osMessageQueuePut(bsp_can1.rx_queue_handle, &rxMsg, 0, 0);
       }
     }
-    // 之后可拓展其他CAN......
-    else
-    {
-    }
+    
   }
+  // 之后可拓展其他CAN......
+  else
+  {
+  }
+  
 }
 
 // 发送完成中断回调
@@ -67,9 +38,11 @@ extern "C" void HAL_FDCAN_TxBufferCompleteCallback(FDCAN_HandleTypeDef* hfdcan, 
   // 例如，可以释放与发送相关的资源或更新状态
 }
 
+/* USER CODE END */
+
 
 /**
- * @brief 以下是bsp_can类型的定义
+ * @brief 以下是bsp_can类型的定义，看到这就可以不看了
  *
  * 发送接收均使用fifo
  * 接收方式采用中断

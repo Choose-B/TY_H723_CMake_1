@@ -7,6 +7,7 @@
  * @date 2026-02-17
  *
  * @todo 绑定协议处理任务的方式和分别协议处理的方式有些原始，希望后人可以修改
+ * @Rh-i 问过实验室老登 发现很难改，这种传入函数指针的
  *
  * @copyright Copyright (c) 2026
  *
@@ -76,7 +77,6 @@ static void uart_protocol_process_callback(bsp_usart<256, 8> *cur_uart, protocol
 {
   if (cur_uart == &bsp_usart9)
   {
-    bsp_usart6.send(rx_frame->data,rx_frame->len);
     // 具体的指令码，以及数据解析，如果到时候真的需要，可以写互斥锁来保护临界区资源，也可以自定义枚举量
     switch (rx_frame->cmd)
     {

@@ -4,30 +4,30 @@
 #include "jc2804.hpp"
 
 // 云台控制模式枚举
-typedef enum
+enum class gimbal_position_mode_e
 {
   GIMBAL_POSITION_MODE_TRAPEZOID = 2, // 位置梯形模式
   GIMBAL_POSITION_MODE_FILTER    = 3, // 位置滤波模式
   GIMBAL_POSITION_MODE_PASS      = 4  // 位置直通模式
-} gimbal_position_mode_e;
+};
 
 // 云台状态枚举
-typedef enum
+enum class gimbal_state_e
 {
   GIMBAL_MOTIONLESS = 0, // 云台静止
   GIMBAL_YAWING,         // yaw轴转动
   GIMBAL_PITCHING,       // pitch轴转动
   GIMBAL_BOTH_MOVING     // 两轴同时转动
-} gimbal_state_e;
+} ;
 
-class GimbalClass
+class gimbal_jc
 {
 public:
   // 构造函数
-  GimbalClass(jc2804* yaw_motor, jc2804* pitch_motor);
+  gimbal_jc(jc2804* yaw_motor, jc2804* pitch_motor);
 
   // 析构函数
-  ~GimbalClass();
+  ~gimbal_jc();
 
   /**
    * @brief 云台初始化

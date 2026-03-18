@@ -100,21 +100,14 @@ extern "C" void _defaultTask(void *argument)
   osDelay(1000);
   printf("Default Task Started\n");
 
-  osDelay(100);
-  motor_pitch.enter_closed_loop();
-  osDelay(100);
-  motor_yaw.enter_closed_loop();
-  osDelay(100);
-  motor_pitch.set_control_mode(5);
-  osDelay(100);
-  motor_yaw.set_control_mode(1);
-
-  uint8_t data2[3] = {0x01,0x02,0x03};
+  uint8_t data[4] = {0};
   for (;;)
   {
+    bsp_usart6.receive(data,4);
+    osDelay(1);
+    bsp_usart6.send(data,4);
     // motor_pitch.set_low_speed(0);
-    osDelay(100);
-    protocal_uart_9.send(0x01,data2,3);
+    osDelay(1000);
   }
 }
 
