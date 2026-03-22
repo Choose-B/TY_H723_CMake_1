@@ -1,18 +1,3 @@
-/**
- * @file api_main.cpp
- * @author Rh
- * @brief 应用层与stm32的接口，放着最直接运行的任务
- * @version 0.1
- * @date 2026-01-20
- *
- * @note 各个外设的中断回调函数，放到了各个的BSP中实现，方便查找
- *       对于中断得到的数据，在这里创建任务等待消息队列 + 处理就可以
- *
- * @copyright Copyright (c) 2026
- *
- */
-
-
 #include "api_main.h"
 #include "cmsis_os2.h"
 #include "main.h" // IWYU pragma: keep
@@ -27,9 +12,11 @@
 /* SVC */
 #include "protocol_usart.hpp"
 
+
 /**
- * @brief main中初始化（无freertos）
- * @note  也就是在main.c中写了一个函数调用，这样转嫁就可以使用cpp了
+ * @brief 主应用程序初始化（非FreeRTOS）
+ *
+ * @note 在main.c的main函数中调用，用于非FreeRTOS环境下的初始化
  *
  */
 void app_init()
@@ -38,9 +25,9 @@ void app_init()
 }
 
 
-/* 创建对应句柄 handle */
+/* ==================== 任务句柄定义 ==================== */
 
-osThreadId_t         can_rx_task_handle; // CAN 接收后处理任务
+osThreadId_t         can_rx_task_handle;              ///< CAN接收后处理任务句柄
 const osThreadAttr_t can_rx_handler_task_attributes = {
   .name       = "can_rx_task",
   .stack_size = 128 * 4,
@@ -49,24 +36,25 @@ const osThreadAttr_t can_rx_handler_task_attributes = {
 
 
 /**
- * @brief 和freertos有关的初始化
- * @note  也就是在main.c中的MX_FREERTOS_INIT里，写了一个函数调用，这样转嫁就可以使用cpp了
+ * @brief FreeRTOS相关初始化
+ *
+ * @note 在main.c的MX_FREERTOS_INIT函数中调用
+ *       用于创建FreeRTOS任务和初始化外设驱动
  *
  */
 void freertos_init()
 {
-  // 初始化bsp设备
+  /* 初始化BSP设备 */
   bsp_usart6.init();
   bsp_usart9.init();
   bsp_can1.init();
 
-  // 初始化协议
-  protocal_uart_9.init(_uart_protocol_task9);
+  /* 初始化协议层 */
+  protocal_usart_9.init();
 
-  // 初始化设备
+  /* 初始化设备 */
 
-
-  // 创建 CAN 接收后处理任务
+  /* 创建CAN接收后处理任务 */
   can_rx_task_handle = osThreadNew(_can_rx_handler_task, nullptr, &can_rx_handler_task_attributes);
 
   printf("freertos_init_ok\n");
@@ -74,48 +62,55 @@ void freertos_init()
 
 
 /**
- * 以下均为FreeRTOS的内容定义，使用c调用cpp，需要extern "C"定义，让RTOS接管
- * CubeMX提供了FreeRTOS配置，故而使用它的CMSIS_OS2
- * CMSIS_OS2封装了一层，导致很多东西和原生的FreeRTOS不一样，所以写法也会有的不一样
- * CMSIS_OS2的初始句柄不对外声明，如果想用只能单独extern出来用
- * CMSIS_OS2做了层封装，方便使用。但是原生的FreeRTOS在以后要用的时候，还是要花时间适应
- * CMSIS_OS2的默认任务只能weak声明，其他的可以使用外部声明
- * printf要加\n
+ * @brief FreeRTOS任务说明
  *
- * @note 在C++中使用FreeRTOS的Task函数时
- *       需要将任务函数声明为extern "C"格式
+ * @note 以下均为FreeRTOS的内容定义，使用C调用C++，需要extern "C"声明，让RTOS接管
+ *       CubeMX提供了FreeRTOS配置，故而使用它的CMSIS_OS2
+ *       CMSIS_OS2封装了一层，导致很多东西和原生的FreeRTOS不一样
+ *       CMSIS_OS2的初始句柄不对外声明，如果想用只能单独extern出来用
+ *       CMSIS_OS2做了层封装，方便使用。但是原生的FreeRTOS在以后要用的时候，还是要花时间适应
+ *       CMSIS_OS2的默认任务只能weak声明，其他的可以使用外部声明
+ *       printf要加\n
+ *
+ * @note 在C++中使用FreeRTOS的Task函数时，
+ *       需要将任务函数声明为extern "C"格式，
  *       同时函数参数必须是void *pvParameters。
- *       所以，我直接把任务放到一个转接文件，然后extern
  */
 
 
 /**
  * @brief 默认任务
  *
- * @param argument 默认参数
+ * @param argument 任务参数
  */
 extern "C" void _defaultTask(void *argument)
 {
+  (void)argument; // 未使用参数
+
   osDelay(1000);
   printf("Default Task Started\n");
   osDelay(1000);
 
-  uint8_t data[8] = {0x01,0x02,0x03};
+  uint8_t data[8] = {0x01, 0x02, 0x03};
   for (;;)
   {
-    bsp_can1.send(0x602,data,3);
+    bsp_can1.send(0x602, data, 3);
     osDelay(100);
-    
   }
 }
 
 
 /**
- * @brief 用于处理CAN接收后的数据处理任务
+ * @brief CAN接收后处理任务
  *
+ * @note 处理从CAN总线接收到的数据，根据设备ID分发到对应的电机处理
+ *
+ * @param argument 任务参数
  */
 extern "C" void _can_rx_handler_task(void *argument)
 {
+  (void)argument; // 未使用参数
+
   printf("CAN RX Task Started\n");
   can_rx_msg_t rx_msg;
 
@@ -125,10 +120,10 @@ extern "C" void _can_rx_handler_task(void *argument)
 
     if (status == osOK)
     {
-      // 根据 ID 判断是哪个设备
+      /* 根据ID判断是哪个设备 */
       uint32_t device_id = rx_msg.header.Identifier;
 
-      // 查找对应的 jc2804 实例
+      /* 查找对应的jc2804实例 */
       if (device_id == (motor_yaw._device_id + 0x600))
       {
         motor_yaw.on_can_message(&rx_msg);
@@ -140,5 +135,3 @@ extern "C" void _can_rx_handler_task(void *argument)
     }
   }
 }
-
-// 串口协议处理函数，在串口协议处创建并定义

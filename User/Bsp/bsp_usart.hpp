@@ -40,6 +40,20 @@
 #include "usart.h" // IWYU pragma: keep
 
 
+/* USER CODE BEGIN */
+
+// 前向声明
+template <size_t BUFFER_SIZE, size_t MSG_SIZE>
+class bsp_usart;
+
+// 外部声明这些类实例化的对象
+
+extern bsp_usart<256, 8> bsp_usart6;
+extern bsp_usart<256, 8> bsp_usart9;
+
+/* USER CODE END */
+
+
 /**
  * @brief 接收模式枚举
  *
@@ -57,23 +71,23 @@ class bsp_usart
 {
 
 private:
-  UART_HandleTypeDef  *_huart;                      ///< UART句柄指针，指向底层硬件接口
-  osMutexId_t          _mutex_id;                   ///< CMSIS-RTOS2互斥锁ID，用于线程安全访问
-  osMessageQueueId_t   _msg_queue_id;               ///< CMSIS-RTOS2消息队列ID，用于LATEST_ONLY模式
-  StreamBufferHandle_t _rx_stream_buffers[2];       ///< 接收流缓冲区数组，[0]为单缓冲或双缓冲第一个，[1]为双缓冲第二个
-  StreamBufferHandle_t _tx_stream_buffer;           ///< FreeRTOS发送流缓冲区句柄
-  receive_mode         _receive_mode;               ///< 接收模式，指定数据接收策略
-  bool                 _rx_active;                  ///< 接收状态标志，指示是否正在接收数据
-  uint8_t              _rx_dma_buffer[BUFFER_SIZE]; ///< DMA接收缓冲区，用于多字节接收
-  uint8_t              _tx_dma_buffer[BUFFER_SIZE]; ///< DMA发送缓冲区，用于多字节发送
-  bool                 _current_buffer;             ///< 当前使用的流缓冲区标识，true表示使用buffer2，false表示buffer1
-  size_t               _buffer_size;                ///< 缓冲区大小，单位字节
-  size_t               _msg_item_size;              ///< 消息队列中每个项目的大小
-  bool                 _transmit_enable;            ///< 是否启用发送
-  uint32_t             _last_received_length;       ///< 最后一次接收的数据长度
-  int                  _instance_id;                ///< 实例ID，用于生成唯一资源名称
-  char                 mutex_name[32];              ///< 实例互斥锁的名字，用于调试时看到名字
-  char                 msgq_name[32];               ///< 实例消息队列的名字，用于调试时看到名字
+  UART_HandleTypeDef  *_huart;                                     ///< UART句柄指针，指向底层硬件接口
+  osMutexId_t          _mutex_id             = nullptr;            ///< CMSIS-RTOS2互斥锁ID，用于线程安全访问
+  osMessageQueueId_t   _msg_queue_id         = nullptr;            ///< CMSIS-RTOS2消息队列ID，用于LATEST_ONLY模式
+  StreamBufferHandle_t _rx_stream_buffers[2] = {nullptr, nullptr}; ///< 接收流缓冲区数组，[0]为单缓冲或双缓冲第一个，[1]为双缓冲第二个
+  StreamBufferHandle_t _tx_stream_buffer     = nullptr;            ///< FreeRTOS发送流缓冲区句柄
+  receive_mode         _receive_mode;                              ///< 接收模式，指定数据接收策略
+  bool                 _rx_active = false;                         ///< 接收状态标志，指示是否正在接收数据
+  uint8_t              _rx_dma_buffer[BUFFER_SIZE];                ///< DMA接收缓冲区，用于多字节接收
+  uint8_t              _tx_dma_buffer[BUFFER_SIZE];                ///< DMA发送缓冲区，用于多字节发送
+  bool                 _current_buffer = false;                    ///< 当前使用的流缓冲区标识，true表示使用buffer2，false表示buffer1
+  size_t               _buffer_size    = BUFFER_SIZE;              ///< 缓冲区大小，单位字节
+  size_t               _msg_item_size  = MSG_SIZE;                 ///< 消息队列中每个项目的大小
+  bool                 _transmit_enable;                           ///< 是否启用发送
+  uint32_t             _last_received_length = 0;                  ///< 最后一次接收的数据长度
+  int                  _instance_id;                               ///< 实例ID，用于生成唯一资源名称
+  char                 mutex_name[32];                             ///< 实例互斥锁的名字，用于调试时看到名字
+  char                 msgq_name[32];                              ///< 实例消息队列的名字，用于调试时看到名字
 
   // 静态成员：实例注册表，用于通过UART句柄查找对应的bsp_usart实例
   static constexpr size_t MAX_INSTANCES = 10;        ///< 最大支持的实例数量
@@ -222,12 +236,6 @@ private:
     return _huart;
   }
 };
-
-
-// 外部声明这些类实例化的对象
-
-extern bsp_usart<256, 8> bsp_usart6;
-extern bsp_usart<256, 8> bsp_usart9;
 
 
 #endif // __BSP_USART_HPP__

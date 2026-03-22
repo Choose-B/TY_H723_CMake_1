@@ -1,3 +1,22 @@
+/**
+ * @file protocol_usart.hpp
+ * @author Rh
+ * @brief 串口协议解析头文件
+ * @version 0.1
+ * @date 2026-02-17
+ *
+ * @todo 优化协议处理方式
+ *
+ * @copyright Copyright (c) 2026
+ *
+ * @details 基于bsp_usart的串口协议解析，支持帧头帧尾自定义
+ *
+ * @note 使用示例：
+ *       - 先实例化bsp_usart（在bsp文件中）
+ *       - 全局类对象实例化：protocol_usart protocal_uart_6(&bsp_usart6, 6);
+ *       - 初始化协议：protocal_uart_6.init();
+ */
+
 #ifndef __PROTOCOL_USART_HPP__
 #define __PROTOCOL_USART_HPP__
 
@@ -7,39 +26,63 @@
 #include "stdint.h"
 
 
-/* 前向声明 */
+/* USER CODE BEGIN */
+
+/* ==================== 外部声明 ==================== */
+
 template <size_t BUFFER_SIZE, size_t MSG_SIZE>
 class bsp_usart;
 
+class protocol_usart;
+/**
+ * @brief 全局串口协议实例
+ */
+extern protocol_usart protocal_usart_9;
+
+/* USER CODE END */
+
 
 /**
- * @brief 协议帧结构体定义，取消对齐
- * @note 对应上位机 AA 55 CMD LEN DATA... SUM 0D 当然帧头帧尾可改
+ * @brief 协议帧结构体定义
+ *
+ * @note 对应上位机：AA 55 CMD LEN DATA... SUM 0D（帧头帧尾可自定义）
  */
 #pragma pack(1)
 typedef struct protocol_frame
 {
-  uint8_t header1;  // 0xAA 默认
-  uint8_t header2;  // 0x55 默认
-  uint8_t cmd;      // 指令码
-  uint8_t len;      // 有效负载长度
-  uint8_t data[64]; // 数据负载 (根据需求调整大小)
-  uint8_t checksum; // 校验和
-  uint8_t tail;     // 0x0D 默认
+  uint8_t header1;  ///< 帧头1（默认0xAA）
+  uint8_t header2;  ///< 帧头2（默认0x55）
+  uint8_t cmd;      ///< 指令码
+  uint8_t len;      ///< 有效负载长度
+  uint8_t data[64]; ///< 数据负载（最大64字节）
+  uint8_t checksum; ///< 校验和
+  uint8_t tail;     ///< 帧尾（默认0x0D）
 } protocol_frame_t;
 #pragma pack()
 
 
+/**
+ * @brief 串口协议类
+ */
 class protocol_usart
 {
 private:
-  protocol_frame_t   rx_frame;        // 接收用结构体
-  bsp_usart<256, 8> *uart_instance;   // 使用的串口驱动实例
-  uint8_t            header1;         // 自定义帧头1
-  uint8_t            header2;         // 自定义帧头2
-  uint8_t            tail;            // 自定义帧尾
-  char               task_name[32];   // 任务名称
-  osThreadAttr_t     task_attributes; // 任务属性成员变量
+  /* ==================== 私有成员变量 ==================== */
+
+  protocol_frame_t   rx_frame;        ///< 接收用结构体
+  bsp_usart<256, 8>* uart_instance;   ///< 使用的串口驱动实例
+  uint8_t            header1;         ///< 自定义帧头1
+  uint8_t            header2;         ///< 自定义帧头2
+  uint8_t            tail;            ///< 自定义帧尾
+  char               task_name[32];   ///< 任务名称
+  osThreadAttr_t     task_attributes; ///< 任务属性成员变量
+
+  /* ==================== 友元声明 ==================== */
+
+  friend void _uart_protocol_task_entry(void* argument); ///< 友元函数，可访问私有成员
+
+
+  /* ==================== 私有成员函数 ==================== */
 
   /**
    * @brief 计算校验和
@@ -47,28 +90,34 @@ private:
    * @param len 长度
    * @return uint8_t 校验结果
    */
-  uint8_t calculate_checksum(uint8_t *data, uint8_t len);
+  uint8_t calculate_checksum(uint8_t* data, uint8_t len);
 
   /**
    * @brief 逻辑分发：根据指令执行具体动作
-   * @param frame 完整的协议包
    */
   void protocol_handle_cmd();
 
+
 public:
+  /* ==================== 构造函数与析构函数 ==================== */
+
   /**
    * @brief 构造函数
-   * @param h1 帧头1，默认0xAA
-   * @param h2 帧头2，默认0x55
-   * @param t  帧尾，默认0x0C
+   * @param uart_ptr 串口实例指针
+   * @param name 实例名称编号
+   * @param h1 帧头1（默认0xAA）
+   * @param h2 帧头2（默认0x55）
+   * @param t 帧尾（默认0x0D）
    */
-  protocol_usart(bsp_usart<256, 8> *uart_ptr, uint8_t name, uint8_t h1 = 0xAA, uint8_t h2 = 0x55, uint8_t t = 0x0C);
+  protocol_usart(bsp_usart<256, 8>* uart_ptr, uint8_t name, uint8_t h1 = 0xAA, uint8_t h2 = 0x55, uint8_t t = 0x0C);
+
+
+  /* ==================== 公共接口 ==================== */
 
   /**
    * @brief 协议处理初始化
-   * @param uart_ptr 指向bsp_usart实例的指针
    */
-  void init(osThreadFunc_t _uart_protocol_task);
+  void init();
 
   /**
    * @brief 发送协议数据包给上位机
@@ -76,21 +125,8 @@ public:
    * @param data 数据指针
    * @param len 数据长度
    */
-  void send(uint8_t cmd, uint8_t *data, uint8_t len);
-
-  /**
-   * @brief 协议解析任务函数 (由 api_main.cpp 调用)
-   */
-  void task(void *argument);
+  void send(uint8_t cmd, uint8_t* data, uint8_t len);
 };
-
-
-/* 声明全局类实例化对象 */
-extern protocol_usart protocal_uart_9;
-
-
-/* 任务函数需要extern "C"封装，会有多个任务函数 */
-extern "C" void _uart_protocol_task9(void *argument);
 
 
 #endif // __PROTOCOL_USART_HPP__

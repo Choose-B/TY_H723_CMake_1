@@ -4,14 +4,12 @@
 #include "task.h"
 #include <stdio.h>
 
+
 /* USER CODE BEGIN */
 
 /* ==================== 声明CAN句柄 ==================== */
 extern FDCAN_HandleTypeDef hfdcan1;
 
-/* ==================== 模板静态成员初始化 ==================== */
-bsp_can *bsp_can::_instances[bsp_can::MAX_INSTANCES] = {nullptr};
-size_t  bsp_can::_instance_count                    = 0;
 
 /* ==================== 全局实例化 ==================== */
 
@@ -24,6 +22,11 @@ size_t  bsp_can::_instance_count                    = 0;
 bsp_can bsp_can1(&hfdcan1, "CAN1");
 
 /* USER CODE END */
+
+
+/* ==================== 模板静态成员初始化 ==================== */
+bsp_can *bsp_can::_instances[bsp_can::MAX_INSTANCES] = {nullptr};
+size_t   bsp_can::_instance_count                    = 0;
 
 
 /* ==================== 中断回调函数 ==================== */
@@ -85,6 +88,7 @@ extern "C"
  * @note 初始化成员变量，注册实例到静态表
  */
 bsp_can::bsp_can(FDCAN_HandleTypeDef *hfdcan, const char *name, can_mode mode)
+
   : _hfdcan(hfdcan),
     _name(name),
     _rx_queue_handle(nullptr),

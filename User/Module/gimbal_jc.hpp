@@ -1,33 +1,91 @@
+/**
+ * @file gimbal_jc.cpp
+ * @author Rh
+ * @brief 云台控制模块实现
+ * @version 0.1
+ * @date 2026-02-13
+ *
+ * @copyright Copyright (c) 2026
+ *
+ * @details 使用JC2804电机实现云台控制
+ *
+ * @note 坐标系统说明：
+ *       电机转法逆时针
+ *       (pitch电机正转为向上)
+ *       ^z
+ *       |   / y(front)(相机朝向)
+ *       |  /
+ *       | /
+ *       . ————————> x(right) (yaw电机反转为向右)
+ *
+ *       云台控制系统中:
+ *       - Yaw轴: 水平旋转轴，对应x轴方向的旋转
+ *       - Pitch轴: 垂直俯仰轴，对应y轴方向的上下移动
+ */
+
 #ifndef __GIMBAL_JC_HPP__
 #define __GIMBAL_JC_HPP__
 
+
 #include "jc2804.hpp"
 
-// 云台控制模式枚举
+
+/* USER CODE BEGIN*/
+
+/* ==================== 外部声明 ==================== */
+class gimbal_jc;
+
+
+/* USER CODE END */
+
+
+/**
+ * @brief 云台控制模式枚举
+ */
 enum class gimbal_position_mode_e
 {
-  GIMBAL_POSITION_MODE_TRAPEZOID = 2, // 位置梯形模式
-  GIMBAL_POSITION_MODE_FILTER    = 3, // 位置滤波模式
-  GIMBAL_POSITION_MODE_PASS      = 4  // 位置直通模式
+  GIMBAL_POSITION_MODE_TRAPEZOID = 2, ///< 位置梯形模式
+  GIMBAL_POSITION_MODE_FILTER    = 3, ///< 位置滤波模式
+  GIMBAL_POSITION_MODE_PASS      = 4  ///< 位置直通模式
 };
 
-// 云台状态枚举
+
+/**
+ * @brief 云台状态枚举
+ */
 enum class gimbal_state_e
 {
-  GIMBAL_MOTIONLESS = 0, // 云台静止
-  GIMBAL_YAWING,         // yaw轴转动
-  GIMBAL_PITCHING,       // pitch轴转动
-  GIMBAL_BOTH_MOVING     // 两轴同时转动
-} ;
+  GIMBAL_MOTIONLESS = 0, ///< 云台静止
+  GIMBAL_YAWING,         ///< Yaw轴转动
+  GIMBAL_PITCHING,       ///< Pitch轴转动
+  GIMBAL_BOTH_MOVING     ///< 两轴同时转动
+};
 
+
+/**
+ * @brief 云台控制类
+ *
+ * @note 使用JC2804电机实现云台控制
+ */
 class gimbal_jc
 {
 public:
-  // 构造函数
+  /* ==================== 构造与析构 ==================== */
+
+  /**
+   * @brief 构造函数
+   * @param yaw_motor Yaw轴电机指针
+   * @param pitch_motor Pitch轴电机指针
+   */
   gimbal_jc(jc2804* yaw_motor, jc2804* pitch_motor);
 
-  // 析构函数
+  /**
+   * @brief 析构函数
+   */
   ~gimbal_jc();
+
+
+  /* ==================== 公共接口 ==================== */
 
   /**
    * @brief 云台初始化
@@ -95,20 +153,27 @@ public:
    */
   void stop();
 
+
 private:
-  jc2804*                _yaw_motor;           // Yaw轴电机指针
-  jc2804*                _pitch_motor;         // Pitch轴电机指针
-  gimbal_position_mode_e _control_mode;        // 当前控制模式
-  gimbal_state_e         _state;               // 当前云台状态
-  float                  _current_yaw_angle;   // 当前Yaw角度
-  float                  _current_pitch_angle; // 当前Pitch角度
-  float                  _target_yaw_angle;    // 目标Yaw角度
-  float                  _target_pitch_angle;  // 目标Pitch角度
+  /* ==================== 私有成员变量 ==================== */
+
+  jc2804*                _yaw_motor;                                                                 ///< Yaw轴电机指针
+  jc2804*                _pitch_motor;                                                               ///< Pitch轴电机指针
+  gimbal_position_mode_e _control_mode        = gimbal_position_mode_e::GIMBAL_POSITION_MODE_FILTER; ///< 当前控制模式
+  gimbal_state_e         _state               = gimbal_state_e::GIMBAL_MOTIONLESS;                   ///< 当前云台状态
+  float                  _current_yaw_angle   = 0.0f;                                                ///< 当前Yaw角度
+  float                  _current_pitch_angle = 0.0f;                                                ///< 当前Pitch角度
+  float                  _target_yaw_angle    = 0.0f;                                                ///< 目标Yaw角度
+  float                  _target_pitch_angle  = 0.0f;                                                ///< 目标Pitch角度
+
+
+  /* ==================== 私有成员函数 ==================== */
 
   /**
    * @brief 更新云台状态
    */
   void update_state();
 };
+
 
 #endif // __GIMBAL_JC_HPP__

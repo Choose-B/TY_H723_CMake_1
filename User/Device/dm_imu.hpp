@@ -1,112 +1,128 @@
 /**
- * @file dm_imu.cpp
+ * @file dm_imu.hpp
  * @author Rh
- * @brief 使用bsp_can接口封装的DM IMU类实现
+ * @brief 使用bsp_can接口封装的DM IMU类
  * @version 0.1
  * @date 2026-03-02
  *
+ * @todo 后续可扩展更多IMU型号支持
+ *
  * @copyright Copyright (c) 2026
  *
+ * @details 使用示例：
+ *          - 类的实例化及初始化需要在FreeRTOS内核启动后进行
  *
- * @brief 使用示例,需要在bsp_can
+ * @note 实例化与初始化
+ *       dm_imu imu_bmi088(&bsp_can1, 0x58, 0x59); // 全局实例化类
+ *       imu_bmi088.init();                        // 需要在freertos内核开启之后去init
  *
- * @note 类的实例化，以及初始化
+ * @note CAN接收处理
+ *       imu_bmi088.on_can_message(&rx_msg); // 类似中断回调
  *
- *  dm_imu imu_bmi088(&bsp_can1, 0x58, 0x59); // 全局实例化类
- *  imu_bmi088.init();                        // 需要在freertos内核开启之后去init
- *
- * @note 在CAN接收后处理任务中，添加对应的处理函数
- *
- *  imu_bmi088.on_can_message(&rx_msg); // 类似中断回调
- *
- * @note extern好之后 直接使用
- *
- *  imu_bmi088.change_to_active();                     // 主动发送数据
- *  imu_data user_imu_data = imu_bmi088.get_imu_data() // 读取数据
+ * @note 数据获取
+ *       imu_bmi088.change_to_active();                     // 主动发送数据
+ *       imu_data user_imu_data = imu_bmi088.get_imu_data() // 读取数据
  *
  */
 
-#ifndef __dm_imu_HPP__
-#define __dm_imu_HPP__
+#ifndef __DM_IMU_HPP__
+#define __DM_IMU_HPP__
 
 #include "bsp_can.hpp"
 
-#define ACCEL_CAN_MAX (235.2f)  // CAN接口加速度计最大值（单位：m/s²）
-#define ACCEL_CAN_MIN (-235.2f) // CAN接口加速度计最小值（单位：m/s²）
-#define GYRO_CAN_MAX (34.88f)   // CAN接口陀螺仪最大值（单位：rad/s）
-#define GYRO_CAN_MIN (-34.88f)  // CAN接口陀螺仪最小值（单位：rad/s）
-#define PITCH_CAN_MAX (90.0f)   // CAN接口俯仰角（Pitch）最大值（单位：度）
-#define PITCH_CAN_MIN (-90.0f)  // CAN接口俯仰角（Pitch）最小值（单位：度）
-#define ROLL_CAN_MAX (180.0f)   // CAN接口横滚角（Roll）最大值（单位：度）
-#define ROLL_CAN_MIN (-180.0f)  // CAN接口横滚角（Roll）最小值（单位：度）
-#define YAW_CAN_MAX (180.0f)    // CAN接口偏航角（Yaw）最大值（单位：度）
-#define YAW_CAN_MIN (-180.0f)   // CAN接口偏航角（Yaw）最小值（单位：度）
-#define TEMP_MIN (0.0f)         // 温度传感器最小值（单位：摄氏度）
-#define TEMP_MAX (60.0f)        // 温度传感器最大值（单位：摄氏度）
-#define Quaternion_MIN (-1.0f)  // 四元数最小值
-#define Quaternion_MAX (1.0f)   // 四元数最大值
 
-#define CMD_READ 0  // 读取命令标识符
-#define CMD_WRITE 1 // 写入命令标识符
+/* USER CODE BEGIN */
+
+/* ==================== 外部声明 ==================== */
+
+// 前向声明
+class dm_imu;
+
+extern dm_imu imu_bmi088; ///< 全局IMU实例
+
+/* USER CODE END */
+
+
+/* ==================== CAN接口参数定义 ==================== */
+
+#define ACCEL_CAN_MAX (235.2f)  ///< CAN接口加速度计最大值（单位：m/s²）
+#define ACCEL_CAN_MIN (-235.2f) ///< CAN接口加速度计最小值（单位：m/s²）
+#define GYRO_CAN_MAX (34.88f)   ///< CAN接口陀螺仪最大值（单位：rad/s）
+#define GYRO_CAN_MIN (-34.88f)  ///< CAN接口陀螺仪最小值（单位：rad/s）
+#define PITCH_CAN_MAX (90.0f)   ///< CAN接口俯仰角（Pitch）最大值（单位：度）
+#define PITCH_CAN_MIN (-90.0f)  ///< CAN接口俯仰角（Pitch）最小值（单位：度）
+#define ROLL_CAN_MAX (180.0f)   ///< CAN接口横滚角（Roll）最大值（单位：度）
+#define ROLL_CAN_MIN (-180.0f)  ///< CAN接口横滚角（Roll）最小值（单位：度）
+#define YAW_CAN_MAX (180.0f)    ///< CAN接口偏航角（Yaw）最大值（单位：度）
+#define YAW_CAN_MIN (-180.0f)   ///< CAN接口偏航角（Yaw）最小值（单位：度）
+#define TEMP_MIN (0.0f)         ///< 温度传感器最小值（单位：摄氏度）
+#define TEMP_MAX (60.0f)        ///< 温度传感器最大值（单位：摄氏度）
+#define Quaternion_MIN (-1.0f)  ///< 四元数最小值
+#define Quaternion_MAX (1.0f)   ///< 四元数最大值
+
+#define CMD_READ 0  ///< 读取命令标识符
+#define CMD_WRITE 1 ///< 写入命令标识符
 
 /**
  * @brief 通信端口枚举
- *
  */
 typedef enum imu_com_port_e
 {
-  COM_USB = 0, // USB通信端口
-  COM_RS485,   // RS485通信端口
-  COM_CAN,     // CAN通信端口
-  COM_VOFA     // VOFA通信端口
+  COM_USB = 0, ///< USB通信端口
+  COM_RS485,   ///< RS485通信端口
+  COM_CAN,     ///< CAN通信端口
+  COM_VOFA     ///< VOFA通信端口
 } imu_com_port_e;
+
 
 /**
  * @brief CAN速率枚举
- *
  */
 typedef enum imu_baudrate_e
 {
-  CAN_BAUD_1M = 0, // CAN波特率 1Mbps
-  CAN_BAUD_500K,   // CAN波特率 500kbps
-  CAN_BAUD_400K,   // CAN波特率 400kbps
-  CAN_BAUD_250K,   // CAN波特率 250kbps
-  CAN_BAUD_200K,   // CAN波特率 200kbps
-  CAN_BAUD_100K,   // CAN波特率 100kbps
-  CAN_BAUD_50K,    // CAN波特率 50kbps
-  CAN_BAUD_25K     // CAN波特率 25kbps
+  CAN_BAUD_1M = 0, ///< CAN波特率 1Mbps
+  CAN_BAUD_500K,   ///< CAN波特率 500kbps
+  CAN_BAUD_400K,   ///< CAN波特率 400kbps
+  CAN_BAUD_250K,   ///< CAN波特率 250kbps
+  CAN_BAUD_200K,   ///< CAN波特率 200kbps
+  CAN_BAUD_100K,   ///< CAN波特率 100kbps
+  CAN_BAUD_50K,    ///< CAN波特率 50kbps
+  CAN_BAUD_25K     ///< CAN波特率 25kbps
 } imu_baudrate_e;
 
 
 /**
- * @brief IMU数据定义
- *
+ * @brief IMU数据结构体
  */
 struct imu_data
 {
-  uint8_t can_id;
-  uint8_t mst_id;
-
-  float pitch;
-  float roll;
-  float yaw;
-
-  float q[4];
-
-  float cur_temp;
+  uint8_t can_id;   ///< CAN ID
+  uint8_t mst_id;   ///< 主机ID
+  float   pitch;    ///< 俯仰角（度）
+  float   roll;     ///< 横滚角（度）
+  float   yaw;      ///< 偏航角（度）
+  float   q[4];     ///< 四元数
+  float   cur_temp; ///< 当前温度（摄氏度）
 };
 
 
-/* 类的声明 */
-
+/**
+ * @brief DM IMU类
+ *
+ * @note 使用bsp_can接口封装，支持欧拉角和四元数输出
+ */
 class dm_imu
 {
 public:
-  uint8_t _device_id; // 设备ID
-  uint8_t _master_id; // 主机ID
+  uint8_t _device_id; ///< 设备ID
+  uint8_t _master_id; ///< 主机ID
+
+
+  /* ==================== 构造与析构 ==================== */
 
   /**
    * @brief 构造函数
+   *
    * @param can_bus 指向bsp_can实例的指针
    * @param device_id 设备ID
    * @param master_id 主机ID
@@ -118,6 +134,9 @@ public:
    */
   ~dm_imu();
 
+
+  /* ==================== 公共接口 ==================== */
+
   /**
    * @brief 初始化IMU
    */
@@ -125,11 +144,14 @@ public:
 
   /**
    * @brief 写寄存器
+   * @param reg_id 寄存器ID
+   * @param data 写入数据
    */
   void write_register(uint8_t reg_id, uint32_t data);
 
   /**
    * @brief 读寄存器
+   * @param reg_id 寄存器ID
    */
   void read_register(uint8_t reg_id);
 
@@ -150,11 +172,13 @@ public:
 
   /**
    * @brief 更改通信端口
+   * @param port 通信端口
    */
   void change_com_port(imu_com_port_e port);
 
   /**
    * @brief 设置主动模式延时
+   * @param delay 延时时间
    */
   void set_active_mode_delay(uint32_t delay);
 
@@ -170,16 +194,19 @@ public:
 
   /**
    * @brief 设置波特率
+   * @param baud 波特率
    */
   void set_baud(imu_baudrate_e baud);
 
   /**
    * @brief 设置CAN ID
+   * @param can_id CAN ID
    */
   void set_can_id(uint8_t can_id);
 
   /**
    * @brief 设置主机ID
+   * @param mst_id 主机ID
    */
   void set_mst_id(uint8_t mst_id);
 
@@ -212,36 +239,63 @@ public:
 
   /**
    * @brief 获取IMU数据（线程安全）
+   * @return imu_data IMU数据
    */
   imu_data get_imu_data();
 
   /**
    * @brief 设置IMU数据（线程安全）
+   * @param data IMU数据
    */
   void set_imu_data(const imu_data& data);
 
-  /* CAN回调相关函数 */
+  /**
+   * @brief CAN消息回调处理
+   * @param rx_msg CAN接收消息
+   */
+  void on_can_message(can_rx_msg_t* rx_msg);
 
-  void on_can_message(can_rx_msg_t* rx_msg); // CAN回调调用内容
 
 private:
-  // 私有辅助函数
-  int   float_to_uint(float x_float, float x_min, float x_max, int bits);
+  /* ==================== 私有成员函数 ==================== */
+
+  /**
+   * @brief 浮点数转无符号整数
+   */
+  int float_to_uint(float x_float, float x_min, float x_max, int bits);
+
+  /**
+   * @brief 无符号整数转浮点数
+   */
   float uint_to_float(int x_int, float x_min, float x_max, int bits);
 
+  /**
+   * @brief 更新欧拉角数据
+   * @param pData 数据指针
+   */
   void update_euler(uint8_t* pData);
+
+  /**
+   * @brief 更新四元数数据
+   * @param pData 数据指针
+   */
   void update_quaternion(uint8_t* pData);
+
+  /**
+   * @brief 处理接收数据
+   * @param pData 数据指针
+   */
   void process_received_data(uint8_t* pData);
 
-  bsp_can* _can_bus;  // CAN总线接口
-  imu_data _imu_data; // IMU数据
-  char     name[32];  // 互斥锁名字
 
-  osMutexId_t _data_mutex_handle; // 用于保护_imu_data的互斥锁
+  /* ==================== 私有成员变量 ==================== */
+
+  bsp_can* _can_bus;  ///< CAN总线接口
+  imu_data _imu_data; ///< IMU数据
+  char     name[32];  ///< 互斥锁名字
+
+  osMutexId_t _data_mutex_handle; ///< 用于保护_imu_data的互斥锁
 };
 
-/* 外部声明使用的全局类实例 */
 
-extern dm_imu imu_bmi088;
-
-#endif // __dm_imu_HPP__
+#endif // __DM_IMU_HPP__

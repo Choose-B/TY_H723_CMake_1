@@ -4,7 +4,7 @@
 
 /* USER CODE BEGIN */
 
-/* 声明串口句柄 */
+/* ==================== 声明串口句柄 ==================== */
 extern UART_HandleTypeDef huart6;
 extern UART_HandleTypeDef huart9;
 
@@ -122,21 +122,9 @@ bsp_usart<BUFFER_SIZE, MSG_SIZE>::bsp_usart(UART_HandleTypeDef *huart, receive_m
 
   : _huart(huart),
     _receive_mode(rx_mode),
-    _rx_active(false),
-    _current_buffer(false),
-    _buffer_size(BUFFER_SIZE),
-    _msg_item_size(MSG_SIZE),
     _transmit_enable(transmit_signal),
-    _last_received_length(0),
     _instance_id(instance_id)
 {
-  // 初始化成员变量但不执行资源分配
-  _mutex_id             = nullptr;
-  _msg_queue_id         = nullptr;
-  _rx_stream_buffers[0] = nullptr;
-  _rx_stream_buffers[1] = nullptr;
-  _tx_stream_buffer     = nullptr;
-
   // 注册当前实例到静态注册表中
   register_instance();
 }

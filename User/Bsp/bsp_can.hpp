@@ -5,7 +5,7 @@
  * @version 0.2
  * @date 2026-02-11
  *
- * @todo 1. 后续可扩展CAN2/CAN3支持；2. 优化过滤器配置
+ * @todo 1. 后续可扩展CAN2/CAN3支持；2. 优化过滤器配置 3. 目前使用查表法存入回调函数中，可能查询速度会慢，希望后人处理
  *
  * @copyright Copyright (c) 2026
  *
@@ -48,6 +48,24 @@
 #include "fdcan.h"     // IWYU pragma: keep
 #include "FreeRTOS.h"  // IWYU pragma: keep
 #include "task.h"      // IWYU pragma: keep
+
+
+/* USER CODE BEGIN */
+
+/* ==================== 外部声明 ==================== */
+
+// 前向声明
+class bsp_can;
+
+/**
+ * @brief 全局实例化
+ * @param CAN句柄
+ * @param 实例名称（用于资源命名）
+ * @param CAN工作模式（默认正常模式）
+ */
+extern bsp_can bsp_can1;
+
+/* USER CODE END */
 
 
 /**
@@ -103,18 +121,18 @@ class bsp_can
 private:
   /* ==================== 硬件相关 ==================== */
   FDCAN_HandleTypeDef *_hfdcan; ///< CAN/FDCAN句柄指针
-  const char          *_name;    ///< 实例名称（用于资源命名）
+  const char          *_name;   ///< 实例名称（用于资源命名）
 
 public:
-  osMessageQueueId_t      _rx_queue_handle;          ///< CMSIS_OS2消息队列（接收）
-  osMutexId_t             _tx_mutex_handle;          ///< CMSIS_OS2互斥锁（发送）
-  can_mode                _work_mode;                ///< CAN工作模式
-  bool                    _is_initialized;           ///< 初始化标志
-  char                    _queue_name[32];           ///< 消息队列名字
-  char                    _mutex_name[32];           ///< 互斥锁名字
-  static constexpr size_t MAX_INSTANCES = 3;         ///< 最大实例数量
-  static bsp_can         *_instances[MAX_INSTANCES]; ///< 实例指针数组
-  static size_t           _instance_count;           ///< 已注册实例数量
+  osMessageQueueId_t      _rx_queue_handle = nullptr; ///< CMSIS_OS2消息队列（接收）
+  osMutexId_t             _tx_mutex_handle = nullptr; ///< CMSIS_OS2互斥锁（发送）
+  can_mode                _work_mode;                 ///< CAN工作模式
+  bool                    _is_initialized = false;    ///< 初始化标志
+  char                    _queue_name[32];            ///< 消息队列名字
+  char                    _mutex_name[32];            ///< 互斥锁名字
+  static constexpr size_t MAX_INSTANCES = 3;          ///< 最大实例数量
+  static bsp_can         *_instances[MAX_INSTANCES];  ///< 实例指针数组
+  static size_t           _instance_count;            ///< 已注册实例数量
 
   /* ==================== 公共接口 ==================== */
 
@@ -212,7 +230,6 @@ public:
   bool register_instance();
 
 private:
-
   /**
    * @brief 配置CAN过滤器
    *
@@ -258,12 +275,6 @@ private:
    */
   HAL_StatusTypeDef start_reception();
 };
-
-
-/* ==================== 外部声明 ==================== */
-
-// CAN1实例
-extern bsp_can bsp_can1;
 
 
 #endif // __BSP_CAN_HPP__
