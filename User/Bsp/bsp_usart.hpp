@@ -16,11 +16,11 @@
  * @note 模板实例化实现 以及类的实例化 第一个数字为缓冲区大小（uint8_t） 第二个数字为消息队列的长度（uint8_t）
  *
  *   // 全局实例化模板
- *   template class bsp_usart<256, 8>;
+ *   template class bsp_usart<128,8>;
  *
  *   // 全局实例化类
  *   __attribute__((section(".dma_buffer")))
- *   bsp_usart<256, 8> bsp_usart6(&huart6, receive_mode::LATEST_ONLY, true);
+ *   bsp_usart<128,8> bsp_usart6(&huart6, receive_mode::LATEST_ONLY, true);
  *
  *   bsp_usart6.init();                              // 需要freertos内核初始化成功之后使用
  *
@@ -48,8 +48,8 @@ class bsp_usart;
 
 // 外部声明这些类实例化的对象
 
-extern bsp_usart<256, 8> bsp_usart6;
-extern bsp_usart<256, 8> bsp_usart9;
+extern bsp_usart<128,8> bsp_usart6;
+extern bsp_usart<128,8> bsp_usart9;
 
 /* USER CODE END */
 

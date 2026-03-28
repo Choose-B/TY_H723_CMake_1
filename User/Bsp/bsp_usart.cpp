@@ -16,7 +16,7 @@ extern UART_HandleTypeDef huart9;
  * @param 第二个数字为消息队列的长度（uint8_t）
  *
  */
-template class bsp_usart<256, 8>;
+template class bsp_usart<128,8>;
 
 /**
  * @brief 全局实例化
@@ -26,8 +26,8 @@ template class bsp_usart<256, 8>;
  * @note 这个 __attribute__((section(".dma_buffer"))) 是把他放到dtcm区域外，在.ld格式文件下实现的
  *
  */
-__attribute__((section(".dma_buffer"))) bsp_usart<256, 8> bsp_usart6(&huart6, receive_mode::SINGLE_BUFFER, true, 6); // 添加实例ID为6
-__attribute__((section(".dma_buffer"))) bsp_usart<256, 8> bsp_usart9(&huart9, receive_mode::SINGLE_BUFFER, true, 9); // 添加实例ID为9
+__attribute__((section(".dma_buffer"))) bsp_usart<128,8> bsp_usart6(&huart6, receive_mode::SINGLE_BUFFER, true, 6); // 添加实例ID为6
+__attribute__((section(".dma_buffer"))) bsp_usart<128,8> bsp_usart9(&huart9, receive_mode::SINGLE_BUFFER, true, 9); // 添加实例ID为9
 
 /* USER CODE END */
 
@@ -71,7 +71,7 @@ extern "C"
   void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
   {
     // 通过UART句柄指针查找对应的bsp_usart实例并处理
-    bsp_usart<256, 8> *instance = bsp_usart<256, 8>::get_instance_by_handle(huart);
+    bsp_usart<128,8> *instance = bsp_usart<128,8>::get_instance_by_handle(huart);
     if (instance != nullptr)
     {
       // 找到对应实例，调用内部处理函数
@@ -85,7 +85,7 @@ extern "C"
    */
   void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
   {
-    bsp_usart<256, 8> *instance = bsp_usart<256, 8>::get_instance_by_handle(huart);
+    bsp_usart<128,8> *instance = bsp_usart<128,8>::get_instance_by_handle(huart);
     if (instance != nullptr)
     {
       instance->handle_tx_complete();

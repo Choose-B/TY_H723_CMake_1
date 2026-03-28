@@ -15,5 +15,6 @@
     ],
     "clangd.checkUpdates": true,
     "cortex-debug.variableUseNaturalFormat": true,
+    "vscode-serial-monitor.loggingVerbosity": "warn",
     
 }

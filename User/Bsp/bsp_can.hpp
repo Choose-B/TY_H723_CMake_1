@@ -41,13 +41,14 @@
  * @note 暂不支持CANFD：所有CANFD相关代码/注释已标注
  */
 
+
 #ifndef __BSP_CAN_HPP__
 #define __BSP_CAN_HPP__
 
-#include "cmsis_os2.h" // IWYU pragma: keep
+#include "cmsis_os2.h" 
 #include "fdcan.h"     // IWYU pragma: keep
 #include "FreeRTOS.h"  // IWYU pragma: keep
-#include "task.h"      // IWYU pragma: keep
+#include "task.h"      
 
 
 /* USER CODE BEGIN */

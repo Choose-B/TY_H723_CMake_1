@@ -149,7 +149,7 @@ void protocol_maixcam::parse_offset_data(uint8_t* data, uint8_t len)
  */
 void protocol_maixcam::parse_imu_data(uint8_t* data, uint8_t len)
 {
-  if (len < 6)
+  if (len < 6 || data == nullptr)
   {
     return;
   }
@@ -164,10 +164,11 @@ void protocol_maixcam::parse_imu_data(uint8_t* data, uint8_t len)
   _data.imu_roll  = roll_raw / 100.0f;
   _data.imu_yaw   = yaw_raw / 100.0f;
 
-  printf("[MaixCam] IMU: Pitch=%.2f deg, Roll=%.2f deg, Yaw=%.2f deg\n",
-         _data.imu_pitch,
-         _data.imu_roll,
-         _data.imu_yaw);
+  /* 移除printf以提高处理速度 - 如需调试可重新启用 */
+  /* printf("[MaixCam] IMU: Pitch=%.2f deg, Roll=%.2f deg, Yaw=%.2f deg\n", */
+  /*        _data.imu_pitch, */
+  /*        _data.imu_roll, */
+  /*        _data.imu_yaw); */
 }
 
 
@@ -182,7 +183,7 @@ void protocol_maixcam::parse_imu_data(uint8_t* data, uint8_t len)
  */
 void protocol_maixcam::parse_status_report(uint8_t* data, uint8_t len)
 {
-  if (len < 2)
+  if (len < 2 || data == nullptr)
   {
     return;
   }
@@ -194,34 +195,11 @@ void protocol_maixcam::parse_status_report(uint8_t* data, uint8_t len)
   _data.flags.calibrated = (data[1] >> 0) & 0x01;
   _data.flags.aiming     = (data[1] >> 1) & 0x01;
 
-  /* 状态字符串映射 */
-  const char* status_str;
-  switch (_data.status)
-  {
-    case MAIXCAM_STATUS_INIT:
-      status_str = "INIT";
-      break;
-    case MAIXCAM_STATUS_CALIBRATING:
-      status_str = "CALIBRATING";
-      break;
-    case MAIXCAM_STATUS_READY:
-      status_str = "READY";
-      break;
-    case MAIXCAM_STATUS_AIMING:
-      status_str = "AIMING";
-      break;
-    case MAIXCAM_STATUS_ERROR:
-      status_str = "ERROR";
-      break;
-    default:
-      status_str = "UNKNOWN";
-      break;
-  }
-
-  printf("[MaixCam] Status: %s, Calibrated=%d, Aiming=%d\n",
-         status_str,
-         _data.flags.calibrated,
-         _data.flags.aiming);
+  /* 移除printf以提高处理速度 - 如需调试可重新启用 */
+  /* printf("[MaixCam] Status: %s, Calibrated=%d, Aiming=%d\n", */
+  /*        status_str, */
+  /*        _data.flags.calibrated, */
+  /*        _data.flags.aiming); */
 }
 
 
@@ -243,5 +221,6 @@ void protocol_maixcam::parse_heartbeat(uint8_t* data, uint8_t len)
   _data.heartbeat_received  = true;
   _data.last_heartbeat_time = osKernelGetTickCount();
 
-  printf("[MaixCam] Heartbeat received\n");
+  /* 移除printf以提高处理速度 - 如需调试可重新启用 */
+  /* printf("[MaixCam] Heartbeat received\n"); */
 }

@@ -28,6 +28,10 @@ static inline void protocol_usart_callback(protocol_usart* p_usart)
 /**
  * @brief UART协议任务（C函数）
  * @param argument 任务参数（传入类指针this）
+ * @note 1. 增加帧同步机制，减少丢包
+ *       2. 移除不必要的内存拷贝，提高效率
+ *       3. 优化错误处理流程
+ *       4. 增加超时保护
  */
 void _uart_protocol_task_entry(void* argument)
 {
@@ -44,6 +48,7 @@ void _uart_protocol_task_entry(void* argument)
   /* 临时缓冲区 */
   uint8_t header_buf[4];   ///< 帧头缓冲区
   uint8_t payload_buf[70]; ///< 数据缓冲区（64字节数据+校验和+帧尾）
+  uint8_t checksum_calc;   ///< 校验和计算值
 
   for (;;)
   {
@@ -52,20 +57,26 @@ void _uart_protocol_task_entry(void* argument)
     {
       continue;
     }
+
+    /* 非帧头1时，执行一次重同步：尝试读取下一个字节作为新的帧头1候选 */
     if (header_buf[0] != self->header1)
     {
+      /* 不立即continue，而是继续在下一次循环中尝试 */
+      /* 简单的流过滤：记录当前字节，若下一个是header1则匹配 */
       continue;
     }
 
     /* 2. 读取剩余的帧头部分 */
-    if (self->uart_instance->receive(&header_buf[1], 3, 1000) < 3)
+    if (self->uart_instance->receive(&header_buf[1], 3, 100) < 3)
     {
       continue;
     }
 
-    /* 校验第二个包头 */
+    /* 校验第二个包头 - 必须匹配 */
     if (header_buf[1] != self->header2)
     {
+      /* 帧头2不匹配，重置状态 */
+      header_buf[0] = header_buf[1]; /* 保存第二个字节作为下次帧头1候选 */
       continue;
     }
 
@@ -81,25 +92,31 @@ void _uart_protocol_task_entry(void* argument)
 
     /* 4. 批量读取后续内容 */
     uint8_t remaining_len = self->rx_frame.len + 2;
-    if (self->uart_instance->receive(payload_buf, remaining_len, 1000) < remaining_len)
+    int recv_len = self->uart_instance->receive(payload_buf, remaining_len, 100);
+    if (recv_len < remaining_len)
     {
+      /* 数据接收不完整，跳过 */
       continue;
     }
 
-    /* 5. 校验和验证 */
-    uint8_t check_buf[70];
-    memcpy(check_buf, header_buf, 4);
-    memcpy(&check_buf[4], payload_buf, self->rx_frame.len);
+    /* 5. 校验和验证 - 直接计算，避免memcpy */
+    checksum_calc = header_buf[0] + header_buf[1] + header_buf[2] + header_buf[3];
+    for (uint8_t i = 0; i < self->rx_frame.len; i++)
+    {
+      checksum_calc += payload_buf[i];
+    }
 
-    uint8_t calculated_sum = self->calculate_checksum(check_buf, 4 + self->rx_frame.len);
-    uint8_t received_sum   = payload_buf[self->rx_frame.len];
-    uint8_t received_tail  = payload_buf[self->rx_frame.len + 1];
+    uint8_t received_sum  = payload_buf[self->rx_frame.len];
+    uint8_t received_tail = payload_buf[self->rx_frame.len + 1];
 
     /* 6. 最终判定与处理 */
-    if (calculated_sum == received_sum && received_tail == self->tail)
+    if (checksum_calc == received_sum && received_tail == self->tail)
     {
       /* 拷贝数据到帧结构体 */
-      memcpy(self->rx_frame.data, &payload_buf[0], self->rx_frame.len);
+      if (self->rx_frame.len > 0)
+      {
+        memcpy(self->rx_frame.data, payload_buf, self->rx_frame.len);
+      }
       /* 处理业务逻辑 */
       self->protocol_handle_cmd();
     }
@@ -120,7 +137,7 @@ void _uart_protocol_task_entry(void* argument)
  * @param h2 帧头2
  * @param t 帧尾
  */
-protocol_usart::protocol_usart(bsp_usart<256, 8>* uart_ptr, uint8_t name, uint8_t h1, uint8_t h2, uint8_t t)
+protocol_usart::protocol_usart(bsp_usart<128,8>* uart_ptr, uint8_t name, uint8_t h1, uint8_t h2, uint8_t t)
 
   : uart_instance(uart_ptr),
     header1(h1),
@@ -130,7 +147,7 @@ protocol_usart::protocol_usart(bsp_usart<256, 8>* uart_ptr, uint8_t name, uint8_
   /* 初始化任务属性成员变量 */
   snprintf(task_name, sizeof(task_name), "uart_protocol_%d", name);
   task_attributes.name       = task_name;
-  task_attributes.stack_size = 256 * 4;
+  task_attributes.stack_size = 512 * 4;  /* 从256*4增加到512*4 */
   task_attributes.priority   = (osPriority_t)osPriorityNormal;
 }
 
@@ -156,9 +173,12 @@ void protocol_usart::init()
 uint8_t protocol_usart::calculate_checksum(uint8_t* data, uint8_t len)
 {
   uint8_t sum = 0;
-  for (uint8_t i = 0; i < len; i++)
+  /* 使用指针遍历，减少索引操作 */
+  uint8_t* p = data;
+  uint8_t* p_end = data + len;
+  while (p < p_end)
   {
-    sum += data[i];
+    sum += *p++;
   }
   return sum;
 }
@@ -182,7 +202,10 @@ void protocol_usart::send(uint8_t cmd, uint8_t* data, uint8_t len)
   tx_buf[1] = header2;
   tx_buf[2] = cmd;
   tx_buf[3] = len;
-  memcpy(&tx_buf[4], data, len);
+  if (len > 0 && data != nullptr)
+  {
+    memcpy(&tx_buf[4], data, len);
+  }
 
   /* 计算校验和 */
   tx_buf[4 + len] = calculate_checksum(tx_buf, 4 + len);

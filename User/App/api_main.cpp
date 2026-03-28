@@ -99,11 +99,15 @@ extern "C" void _defaultTask(void *argument)
   printf("Default Task Started\n");
   osDelay(1000);
 
-  uint8_t data[8] = {0x01, 0x02, 0x03};
+  motor_yaw.enter_closed_loop();
+  osDelay(10);
+  motor_yaw.set_control_mode(3);
+  osDelay(10);
+
   for (;;)
   {
-    bsp_can1.send(0x602, data, 3);
-    osDelay(100);
+    // motor_yaw.set_speed(100);
+    osDelay(10);
   }
 }
 
